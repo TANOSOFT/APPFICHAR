@@ -109,11 +109,17 @@ export function MonetizationPanel() {
             }
 
             if (!admins || admins.length === 0) {
-                alert('No se encontraron administradores para esta empresa.');
+                alert('No se encontraron administradores o managers para esta empresa.');
                 return;
             }
 
-            const notices = admins.map(admin => ({
+            const activeAdmins = admins.filter(a => a.email);
+            if (activeAdmins.length === 0) {
+                alert('Los administradores encontrados no tienen un email configurado.');
+                return;
+            }
+
+            const notices = activeAdmins.map(admin => ({
                 user_id: admin.id,
                 tenant_id: tenant.id,
                 type: 'billing_notice',
@@ -131,17 +137,37 @@ export function MonetizationPanel() {
             // ENVIAR EMAIL RESEND
             const { data: funcData, error: funcError } = await supabase.functions.invoke('send-monetization-email', {
                 body: {
-                    to: admins.map(a => a.email),
+                    to: activeAdmins.map(a => a.email),
                     subject: '🧾 Aviso de Pago Pendiente - AppFichar',
                     html: `<h2>Aviso de Pago</h2><p>Le recordamos que tiene una factura pendiente de pago en su cuenta de AppFichar.</p><p>Por favor, regularice su situación para evitar la suspensión del servicio.</p><br/><p>AppFichar Administración</p>`
                 }
             });
 
             if (funcError) {
-                console.error('Error en Edge Function:', funcError);
-                alert('La notificación se creó en la App, pero falló el envío del Email: ' + funcError.message);
+                console.error('Error completo en Edge Function:', funcError);
+
+                let detailedError = funcError.message;
+
+                // Intentar extraer el mensaje de error del cuerpo de la respuesta
+                if (funcError.context && funcError.context.res) {
+                    try {
+                        const resClone = funcError.context.res.clone();
+                        const contentType = resClone.headers.get('content-type');
+
+                        if (contentType && contentType.includes('application/json')) {
+                            const errorData = await resClone.json();
+                            detailedError = errorData.error || errorData.message || JSON.stringify(errorData);
+                        } else {
+                            detailedError = await resClone.text() || detailedError;
+                        }
+                    } catch (e) {
+                        console.error('Error al intentar leer el cuerpo del error:', e);
+                    }
+                }
+
+                alert(`⚠️ FALLO EN ENVÍO DE EMAIL (Status: ${funcError.status || '???'})\n\nMotivo: ${detailedError}\n\nRevisa los 'Logs' en el Dashboard de Supabase para ver el error completo.`);
             } else {
-                alert(`Aviso enviado con éxito (App + Email) a ${admins.length} administrador(es).`);
+                alert(`✅ Aviso enviado con éxito!\n\nSe ha creado la notificación en la App y se ha enviado el email a ${activeAdmins.length} destinatario(s).`);
             }
         } catch (error) {
             console.error('Error enviando aviso:', error);
