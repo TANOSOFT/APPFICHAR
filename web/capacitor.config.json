@@ -1,0 +1,8 @@
+{
+  "appId": "com.appfichar.app",
+  "appName": "AppFichar",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "appfichar"
+  }
+}
