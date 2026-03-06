@@ -77,9 +77,9 @@ export function MonetizationPanel() {
                     // ENVIAR EMAIL RESEND
                     const { error: funcError } = await supabase.functions.invoke('send-monetization-email', {
                         body: {
-                            to: admins.map(a => a.email),
+                            type: 'license_suspended',
                             subject: '⚠️ IMPORTANTE: Acceso a AppFichar Suspendido',
-                            html: `<h2>Licencia Suspendida</h2><p>Hola, el acceso de su empresa a <strong>AppFichar</strong> ha sido suspendido debido a falta de pago o expiración del contrato.</p><p>Para reactivarlo, por favor contacte con administración.</p>`
+                            to: admins.map(a => a.email),
                         }
                     });
                     if (funcError) console.error('Error enviando email suspension:', funcError);
@@ -137,9 +137,9 @@ export function MonetizationPanel() {
             // ENVIAR EMAIL RESEND
             const { data: funcData, error: funcError } = await supabase.functions.invoke('send-monetization-email', {
                 body: {
-                    to: activeAdmins.map(a => a.email),
+                    type: 'billing_notice',
                     subject: '🧾 Aviso de Pago Pendiente - AppFichar',
-                    html: `<h2>Aviso de Pago</h2><p>Le recordamos que tiene una factura pendiente de pago en su cuenta de AppFichar.</p><p>Por favor, regularice su situación para evitar la suspensión del servicio.</p><br/><p>AppFichar Administración</p>`
+                    to: activeAdmins.map(a => a.email),
                 }
             });
 
@@ -172,6 +172,56 @@ export function MonetizationPanel() {
         } catch (error) {
             console.error('Error enviando aviso:', error);
             alert('Error al enviar el aviso: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePlanChange = async (tenantId, planId) => {
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('tenants')
+                .update({ plan_id: planId })
+                .eq('id', tenantId);
+
+            if (error) throw error;
+
+            // Notify about plan change
+            const { data: admins } = await supabase
+                .from('profiles')
+                .select('id, email, full_name')
+                .eq('tenant_id', tenantId)
+                .in('role', ['admin', 'manager']);
+
+            if (admins && admins.length > 0) {
+                const planName = plans.find(p => p.id === planId)?.name || 'Nuevo Plan';
+                const notices = admins.map(admin => ({
+                    user_id: admin.id,
+                    tenant_id: tenantId,
+                    type: 'plan_change',
+                    title: '✨ PLAN ACTUALIZADO',
+                    message: `Su empresa ha sido actualizada al plan ${planName}. Ya puede disfrutar de las nuevas ventajas.`
+                }));
+                await supabase.from('notifications').insert(notices);
+
+                const activeAdmins = admins.filter(a => a.email);
+                if (activeAdmins.length > 0) {
+                    await supabase.functions.invoke('send-monetization-email', {
+                        body: {
+                            type: 'plan_change',
+                            subject: `✨ AppFichar: Su plan ha sido actualizado a ${planName}`,
+                            to: activeAdmins.map(a => a.email),
+                        }
+                    });
+                }
+            }
+
+            fetchData();
+            alert('✅ Plan actualizado y notificaciones enviadas.');
+        } catch (error) {
+            console.error('Error cambiando plan:', error);
+            alert('Error al cambiar plan: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -270,11 +320,11 @@ export function MonetizationPanel() {
                             type="text"
                             placeholder="Buscar por nombre o CIF..."
                             className="input"
-                            style={{ flex: 1, minWidth: '200px' }}
+                            style={{ flex: '1 1 300px' }}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
-                        <select className="input" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                        <select className="input" style={{ flex: '1 1 200px' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                             <option value="all">Todos los estados</option>
                             <option value="active">Activos</option>
                             <option value="trial">En Prueba</option>
@@ -283,14 +333,14 @@ export function MonetizationPanel() {
                         </select>
                     </div>
 
-                    <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+                    <div className="card" style={{ padding: 0, overflowX: 'auto', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                                 <tr>
                                     <th style={{ padding: '1rem', textAlign: 'left' }}>Cliente</th>
-                                    <th style={{ padding: '1rem', textAlign: 'left' }}>Plan</th>
+                                    <th className="hide-mobile" style={{ padding: '1rem', textAlign: 'left' }}>Plan</th>
                                     <th style={{ padding: '1rem', textAlign: 'left' }}>Estado</th>
-                                    <th style={{ padding: '1rem', textAlign: 'left' }}>Vto. Cobro</th>
+                                    <th className="hide-mobile" style={{ padding: '1rem', textAlign: 'left' }}>Vto. Cobro</th>
                                     <th style={{ padding: '1rem', textAlign: 'left' }}>Acciones</th>
                                 </tr>
                             </thead>
@@ -301,17 +351,17 @@ export function MonetizationPanel() {
                                     .map(t => (
                                         <tr key={t.id} onClick={() => setSelectedTenant(t)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.2s' }}>
                                             <td style={{ padding: '1rem' }}>
-                                                <div style={{ fontWeight: '600' }}>{t.name}</div>
+                                                <div style={{ fontWeight: '600', color: '#1e293b' }}>{t.name}</div>
                                                 <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{t.cif || 'Sin CIF'}</div>
                                             </td>
-                                            <td style={{ padding: '1rem' }}>{t.subscription_plans?.name || 'Starter'}</td>
+                                            <td className="hide-mobile" style={{ padding: '1rem' }}>{t.subscription_plans?.name || 'Starter'}</td>
                                             <td style={{ padding: '1rem' }}><StatusBadge status={t.subscription_status} /></td>
-                                            <td style={{ padding: '1rem' }}>{t.next_billing_date ? format(new Date(t.next_billing_date), 'dd MMM yyyy', { locale: es }) : '---'}</td>
+                                            <td className="hide-mobile" style={{ padding: '1rem' }}>{t.next_billing_date ? format(new Date(t.next_billing_date), 'dd MMM yyyy', { locale: es }) : '---'}</td>
                                             <td style={{ padding: '1rem' }}>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); generateInvoicePDF(t); }}
                                                     className="btn btn-secondary"
-                                                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }}
+                                                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', whiteSpace: 'nowrap' }}
                                                 >🧾 Facturar</button>
                                             </td>
                                         </tr>
@@ -397,71 +447,93 @@ export function MonetizationPanel() {
                 </div>
             )}
 
-            {/* DETAILS PANEL (Side Drawer) */}
+            {/* DETAILS MODAL (Responsive) */}
             {selectedTenant && (
                 <div style={{
-                    position: 'fixed', top: 0, right: 0, bottom: 0, width: '400px',
-                    backgroundColor: 'white', boxShadow: '-10px 0 30px rgba(0,0,0,0.1)',
-                    zIndex: 2000, padding: '2rem', display: 'flex', flexDirection: 'column',
-                    animation: 'slideInRight 0.3s ease-out'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-                        <h2 style={{ margin: 0 }}>Detalle Cliente</h2>
-                        <button onClick={() => setSelectedTenant(null)} className="btn btn-secondary" style={{ borderRadius: '50%', width: '32px', height: '32px', padding: 0 }}>✕</button>
-                    </div>
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)',
+                    zIndex: 2000, display: 'flex', justifyContent: 'flex-end',
+                    animation: 'fadeIn 0.2s ease-out'
+                }} onClick={() => setSelectedTenant(null)}>
+                    <div style={{
+                        width: '100%', maxWidth: '450px', backgroundColor: 'white',
+                        height: '100%', display: 'flex', flexDirection: 'column',
+                        boxShadow: '-10px 0 25px rgba(0,0,0,0.1)',
+                        animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ padding: '2rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#0f172a' }}>Detalle del Cliente</h2>
+                            <button onClick={() => setSelectedTenant(null)} className="btn btn-secondary" style={{ borderRadius: '50%', width: '36px', height: '36px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                        </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                        <section style={{ marginBottom: '2rem' }}>
-                            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '0.5rem' }}>Información General</div>
-                            <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{selectedTenant.name}</div>
-                            <div style={{ color: '#64748b' }}>CIF: {selectedTenant.cif || '---'}</div>
-                            <div style={{ color: '#64748b' }}>{selectedTenant.address || '---'}</div>
-                        </section>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
+                            <section style={{ marginBottom: '2.5rem' }}>
+                                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Información Corporativa</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.25rem' }}>{selectedTenant.name}</div>
+                                <div style={{ color: '#64748b', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <span>CIF: {selectedTenant.cif || '---'}</span>
+                                    <span style={{ color: '#cbd5e1' }}>|</span>
+                                    <span>{selectedTenant.legal_name || 'Sin nombre legal'}</span>
+                                </div>
+                                <div style={{ color: '#64748b', marginTop: '0.5rem', fontSize: '0.875rem' }}>📍 {selectedTenant.address || 'Sin dirección registrada'}</div>
+                            </section>
 
-                        <section style={{ marginBottom: '2rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '12px' }}>
-                            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '1rem' }}>Suscripción</div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <span>Estado:</span>
-                                <StatusBadge status={selectedTenant.subscription_status} />
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <span>Plan actual:</span>
-                                <select
-                                    className="input"
-                                    style={{ width: 'auto', padding: '2px 8px' }}
-                                    value={selectedTenant.plan_id}
-                                    onChange={async (e) => {
-                                        const { error } = await supabase.from('tenants').update({ plan_id: e.target.value }).eq('id', selectedTenant.id);
-                                        if (!error) fetchData();
-                                    }}
-                                >
-                                    {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>Siguiente cobro:</span>
-                                <strong>{selectedTenant.next_billing_date ? format(new Date(selectedTenant.next_billing_date), 'dd/MM/yyyy') : '---'}</strong>
-                            </div>
-                        </section>
+                            <section style={{ marginBottom: '2.5rem', padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', letterSpacing: '0.05em', marginBottom: '1.25rem' }}>Estado de Suscripción</div>
 
-                        <section>
-                            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '1rem' }}>Acciones de Control</div>
-                            <div style={{ display: 'grid', gap: '0.75rem' }}>
-                                {selectedTenant.subscription_status === 'suspended' ? (
-                                    <button onClick={() => handleUpdateStatus(selectedTenant.id, 'active')} className="btn btn-primary" style={{ backgroundColor: '#10b981' }}>✅ Reactivar Licencia</button>
-                                ) : (
-                                    <button onClick={() => handleUpdateStatus(selectedTenant.id, 'suspended')} className="btn btn-secondary" style={{ backgroundColor: '#fef2f2', color: '#991b1b' }}>🚫 Suspender Acceso</button>
-                                )}
-                                <button
-                                    onClick={() => handleSendPaymentNotice(selectedTenant)}
-                                    className="btn btn-secondary"
-                                    style={{ border: '1px solid #10b981', color: 'white', backgroundColor: '#10b981' }}
-                                    disabled={loading}
-                                >
-                                    {loading ? 'Enviando...' : '📧 Enviar Aviso de Pago'}
-                                </button>
-                            </div>
-                        </section>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                                    <span style={{ color: '#475569' }}>Estado Actual:</span>
+                                    <StatusBadge status={selectedTenant.subscription_status} />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                                    <span style={{ color: '#475569' }}>Plan Contratado:</span>
+                                    <select
+                                        className="input"
+                                        style={{ width: 'auto', padding: '4px 12px', fontSize: '0.875rem', borderRadius: '8px' }}
+                                        value={selectedTenant.plan_id}
+                                        onChange={(e) => handlePlanChange(selectedTenant.id, e.target.value)}
+                                    >
+                                        {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: '#475569' }}>Próxima Factura:</span>
+                                    <strong style={{ color: '#1e293b' }}>{selectedTenant.next_billing_date ? format(new Date(selectedTenant.next_billing_date), 'dd/MM/yyyy') : '---'}</strong>
+                                </div>
+                            </section>
+
+                            <section>
+                                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', letterSpacing: '0.05em', marginBottom: '1.25rem' }}>Acciones Administrativas</div>
+                                <div style={{ display: 'grid', gap: '1rem' }}>
+                                    {selectedTenant.subscription_status === 'suspended' ? (
+                                        <button onClick={() => handleUpdateStatus(selectedTenant.id, 'active')} className="btn btn-primary" style={{ backgroundColor: '#10b981', padding: '0.75rem' }}>✅ Reactivar Licencia</button>
+                                    ) : (
+                                        <button onClick={() => handleUpdateStatus(selectedTenant.id, 'suspended')} className="btn btn-secondary" style={{ backgroundColor: '#fff1f2', color: '#e11d48', borderColor: '#fecdd3', padding: '0.75rem' }}>🚫 Suspender Acceso</button>
+                                    )}
+
+                                    <button
+                                        onClick={() => handleSendPaymentNotice(selectedTenant)}
+                                        className="btn btn-primary"
+                                        style={{ backgroundColor: '#4f46e5', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                        disabled={loading}
+                                    >
+                                        {loading ? 'Enviando...' : (
+                                            <><span>📧</span> Enviar Aviso de Pago</>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={() => generateInvoicePDF(selectedTenant)}
+                                        className="btn btn-secondary"
+                                        style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                    >
+                                        <span>🧾</span> Generar Factura PDF
+                                    </button>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             )}
@@ -474,6 +546,11 @@ export function MonetizationPanel() {
                 @keyframes fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
+                }
+                @media (max-width: 768px) {
+                    .hide-mobile { display: none; }
+                    .modal-content { max-width: 100% !important; border-radius: 20px 20px 0 0 !important; }
+                    h1 { font-size: 1.5rem; }
                 }
             `}</style>
         </div>

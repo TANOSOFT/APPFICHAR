@@ -729,17 +729,47 @@ export function SuperAdminMenu({ profile }) {
     }
 
     return (
-        <div className="card" style={{ marginTop: '2rem', border: '2px solid #6366f1' }}>
-            <style>{modalStyles}</style>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="card admin-card" style={{ marginTop: '2rem', border: '2px solid #6366f1', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
+            <style>{`
+                ${modalStyles}
+                @media (max-width: 768px) {
+                    .admin-card { padding: 0.75rem !important; margin-top: 1rem !important; }
+                    .admin-header h2 { font-size: 1.1rem !important; line-height: 1.2; }
+                    .admin-header p { font-size: 0.75rem !important; }
+                    .btn-stack { width: 100%; flex-direction: column !important; margin-top: 0.5rem; }
+                    .btn-stack button { width: 100%; justify-content: center; }
+                    .tabs-scroll { 
+                        display: flex !important;
+                        overflow-x: auto !important; 
+                        white-space: nowrap !important; 
+                        -webkit-overflow-scrolling: touch;
+                        padding-bottom: 5px;
+                        margin-bottom: 0.5rem;
+                        width: 100%;
+                    }
+                    .tabs-scroll button { 
+                        padding: 0.5rem 0.75rem !important; 
+                        font-size: 0.8rem !important; 
+                        flex-shrink: 0;
+                    }
+                    .hide-on-mobile { display: none !important; }
+                    .full-width-on-mobile { width: 100% !important; flex: 1 1 100% !important; }
+                }
+                @media (max-width: 400px) {
+                    .admin-header h2 { font-size: 1rem !important; }
+                    .tabs-scroll button { padding: 0.4rem 0.6rem !important; font-size: 0.75rem !important; }
+                }
+            `}</style>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                     <h2 style={{ margin: 0, color: '#4f46e5' }}>🛡️ Panel de Super-Administrador</h2>
                     <p className="text-muted">Gestión global de todas las empresas y usuarios</p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="btn-stack" style={{ display: 'flex', gap: '0.5rem' }}>
                     <button
                         className="btn btn-secondary"
                         onClick={() => document.getElementById('restore-input').click()}
+                        style={{ fontSize: '0.875rem' }}
                     >
                         📥 Restaurar
                     </button>
@@ -753,7 +783,7 @@ export function SuperAdminMenu({ profile }) {
                     <button
                         className="btn btn-primary"
                         onClick={() => setShowNewTenantModal(true)}
-                        style={{ backgroundColor: '#4f46e5' }}
+                        style={{ backgroundColor: '#4f46e5', fontSize: '0.875rem' }}
                     >
                         🏢 Nueva Empresa
                     </button>
@@ -761,14 +791,15 @@ export function SuperAdminMenu({ profile }) {
             </div>
 
             {/* Tab Navigation */}
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderBottom: '1px solid #e5e7eb' }}>
+            <div className="tabs-scroll" style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', borderBottom: '1px solid #e5e7eb' }}>
                 <button
                     onClick={() => setActiveTab('companies')}
                     style={{
                         padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer',
                         borderBottom: activeTab === 'companies' ? '3px solid #6366f1' : '3px solid transparent',
                         fontWeight: activeTab === 'companies' ? 'bold' : 'normal',
-                        color: activeTab === 'companies' ? '#6366f1' : '#666'
+                        color: activeTab === 'companies' ? '#6366f1' : '#666',
+                        fontSize: '0.875rem'
                     }}
                 >
                     🏢 Empresas
@@ -779,21 +810,11 @@ export function SuperAdminMenu({ profile }) {
                         padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer',
                         borderBottom: activeTab === 'users' ? '3px solid #6366f1' : '3px solid transparent',
                         fontWeight: activeTab === 'users' ? 'bold' : 'normal',
-                        color: activeTab === 'users' ? '#6366f1' : '#666'
+                        color: activeTab === 'users' ? '#6366f1' : '#666',
+                        fontSize: '0.875rem'
                     }}
                 >
-                    👥 Usuarios Globales
-                </button>
-                <button
-                    onClick={() => setActiveTab('system')}
-                    style={{
-                        padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer',
-                        borderBottom: activeTab === 'system' ? '3px solid #6366f1' : '3px solid transparent',
-                        fontWeight: activeTab === 'system' ? 'bold' : 'normal',
-                        color: activeTab === 'system' ? '#6366f1' : '#666'
-                    }}
-                >
-                    🛡️ Estado del Sistema
+                    👥 Usuarios
                 </button>
                 <button
                     onClick={() => setActiveTab('monetization')}
@@ -801,10 +822,23 @@ export function SuperAdminMenu({ profile }) {
                         padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer',
                         borderBottom: activeTab === 'monetization' ? '3px solid #6366f1' : '3px solid transparent',
                         fontWeight: activeTab === 'monetization' ? 'bold' : 'normal',
-                        color: activeTab === 'monetization' ? '#6366f1' : '#666'
+                        color: activeTab === 'monetization' ? '#6366f1' : '#666',
+                        fontSize: '0.875rem'
                     }}
                 >
                     💰 Monetización
+                </button>
+                <button
+                    onClick={() => setActiveTab('system')}
+                    style={{
+                        padding: '0.75rem 1rem', border: 'none', background: 'none', cursor: 'pointer',
+                        borderBottom: activeTab === 'system' ? '3px solid #6366f1' : '3px solid transparent',
+                        fontWeight: activeTab === 'system' ? 'bold' : 'normal',
+                        color: activeTab === 'system' ? '#6366f1' : '#666',
+                        fontSize: '0.875rem'
+                    }}
+                >
+                    🛡️ Estado
                 </button>
             </div>
 
@@ -835,24 +869,25 @@ export function SuperAdminMenu({ profile }) {
             {/* TAB: COMPANIES */}
             {activeTab === 'companies' && (
                 <div style={{ marginTop: '1.5rem' }}>
-                    <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem' }}>
+                    <div className="admin-actions" style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <input
                             type="text"
-                            placeholder="🔍 Buscar empresa por nombre o razón social..."
-                            className="input"
+                            placeholder="🔍 Buscar empresa..."
+                            className="input full-width-on-mobile"
+                            style={{ flex: 1 }}
                             value={tenantSearch}
                             onChange={(e) => setTenantSearch(e.target.value)}
                         />
                     </div>
 
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                             <thead>
                                 <tr style={{ textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>
                                     <th style={{ padding: '0.75rem' }}>Nombre</th>
-                                    <th style={{ padding: '0.75rem' }}>Razón Social</th>
-                                    <th style={{ padding: '0.75rem' }}>Empleados</th>
-                                    <th style={{ padding: '0.75rem' }}>Fecha Registro</th>
+                                    <th className="hide-on-mobile" style={{ padding: '0.75rem' }}>Razón Social</th>
+                                    <th className="hide-on-mobile" style={{ padding: '0.75rem' }}>Empleados</th>
+                                    <th className="hide-on-mobile" style={{ padding: '0.75rem' }}>Fecha Registro</th>
                                     <th style={{ padding: '0.75rem' }}>Acciones</th>
                                 </tr>
                             </thead>
@@ -863,8 +898,8 @@ export function SuperAdminMenu({ profile }) {
                                 {filteredTenants.map(t => (
                                     <tr key={t.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                         <td style={{ padding: '0.75rem' }}><strong>{t.name}</strong></td>
-                                        <td style={{ padding: '0.75rem' }}>{t.legal_name || '-'}</td>
-                                        <td style={{ padding: '0.75rem' }}>
+                                        <td className="hide-on-mobile" style={{ padding: '0.75rem' }}>{t.legal_name || '-'}</td>
+                                        <td className="hide-on-mobile" style={{ padding: '0.75rem' }}>
                                             <span style={{
                                                 padding: '0.25rem 0.5rem',
                                                 backgroundColor: '#e0f2fe', color: '#0369a1',
@@ -873,11 +908,11 @@ export function SuperAdminMenu({ profile }) {
                                                 {t.profiles?.[0]?.count || 0}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                                        <td className="hide-on-mobile" style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
                                             {format(new Date(t.created_at), 'dd MMM yyyy', { locale: es })}
                                         </td>
                                         <td style={{ padding: '0.75rem' }}>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                                                 <button
                                                     className="btn btn-secondary"
                                                     style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
@@ -931,11 +966,12 @@ export function SuperAdminMenu({ profile }) {
             {/* TAB: USERS (Global Search) */}
             {activeTab === 'users' && (
                 <div style={{ marginTop: '1.5rem' }}>
-                    <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem' }}>
+                    <div className="admin-actions" style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <input
                             type="text"
-                            placeholder="🔍 Buscar por nombre o email en todo el sistema..."
-                            className="input"
+                            placeholder="🔍 Buscar usuario en todo el sistema..."
+                            className="input full-width-on-mobile"
+                            style={{ flex: 1 }}
                             value={userSearch}
                             onChange={(e) => {
                                 setUserSearch(e.target.value);
@@ -944,7 +980,7 @@ export function SuperAdminMenu({ profile }) {
                         />
                         {userSearch && (
                             <button
-                                className="btn btn-secondary"
+                                className="btn btn-secondary full-width-on-mobile"
                                 onClick={() => { setUserSearch(''); fetchGlobalUsers(''); }}
                             >
                                 Limpiar
@@ -953,13 +989,13 @@ export function SuperAdminMenu({ profile }) {
                     </div>
 
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                             <thead>
                                 <tr style={{ textAlign: 'left', borderBottom: '2px solid #e5e7eb' }}>
                                     <th style={{ padding: '0.75rem' }}>Usuario</th>
-                                    <th style={{ padding: '0.75rem' }}>Email</th>
-                                    <th style={{ padding: '0.75rem' }}>Empresa Vinculada</th>
-                                    <th style={{ padding: '0.75rem' }}>Rol</th>
+                                    <th className="hide-on-mobile" style={{ padding: '0.75rem' }}>Email</th>
+                                    <th style={{ padding: '0.75rem' }}>Empresa</th>
+                                    <th className="hide-on-mobile" style={{ padding: '0.75rem' }}>Rol</th>
                                     <th style={{ padding: '0.75rem' }}>Acciones</th>
                                 </tr>
                             </thead>
@@ -970,7 +1006,7 @@ export function SuperAdminMenu({ profile }) {
                                 {globalUsers.map(u => (
                                     <tr key={u.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                         <td style={{ padding: '0.75rem' }}><strong>{u.full_name || 'Sin nombre'}</strong></td>
-                                        <td style={{ padding: '0.75rem' }}>{u.email}</td>
+                                        <td className="hide-on-mobile" style={{ padding: '0.75rem' }}>{u.email}</td>
                                         <td style={{ padding: '0.75rem' }}>
                                             {u.tenants?.name ? (
                                                 <span style={{ color: '#4f46e5', fontWeight: '500' }}>🏢 {u.tenants.name}</span>
@@ -978,7 +1014,7 @@ export function SuperAdminMenu({ profile }) {
                                                 <span style={{ color: '#ef4444' }}>⚠️ Sin empresa</span>
                                             )}
                                         </td>
-                                        <td style={{ padding: '0.75rem' }}>
+                                        <td className="hide-on-mobile" style={{ padding: '0.75rem' }}>
                                             <span style={{
                                                 padding: '0.25rem 0.5rem',
                                                 borderRadius: '4px', fontSize: '0.875rem',
