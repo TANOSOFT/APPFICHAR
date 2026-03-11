@@ -1,13 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || ''
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const getEmailHtml = (type: string, data: any) => {
+const LOPD_GENERIC = `De conformidad con lo dispuesto en el Reglamento (UE) 2016/679 de 27 de abril (GDPR) y la Ley Orgánica 3/2018 de 5 de diciembre (LOPDGDD), le informamos que sus datos personales son tratados bajo la responsabilidad de la empresa remitente para el mantenimiento de la relación profesional y/o contractual. Sus datos se conservarán mientras exista un interés mutuo para ello. Puede ejercer sus derechos de acceso, rectificación, portabilidad, supresión, limitación y oposición dirigiéndose a la dirección del remitente.`;
+
+const getEmailHtml = (type: string, data: any, lopdText?: string) => {
     const primaryColor = '#4f46e5';
     const secondaryColor = '#10b981';
     const errorColor = '#e11d48';
@@ -17,6 +21,8 @@ const getEmailHtml = (type: string, data: any) => {
     let buttonText = '';
     let buttonUrl = '#'; // In a real app, this would be the billing or dashboard URL
     let accentColor = primaryColor;
+
+    const footerLopd = lopdText || LOPD_GENERIC;
 
     switch (type) {
         case 'billing_notice':
@@ -67,6 +73,7 @@ const getEmailHtml = (type: string, data: any) => {
             .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
             .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
             .footer { background-color: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+            .lopd { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #e2e8f0; font-size: 10px; color: #94a3b8; text-align: justify; line-height: 1.4; }
             .button { display: inline-block; padding: 12px 24px; background-color: ${accentColor}; color: white !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 20px; }
             .logo { font-size: 20px; font-weight: 800; color: white; text-transform: uppercase; margin-bottom: 10px; opacity: 0.9; }
         </style>
@@ -81,6 +88,10 @@ const getEmailHtml = (type: string, data: any) => {
                 ${content}
                 ${buttonText ? `<a href="${buttonUrl}" class="button">${buttonText}</a>` : ''}
                 <p style="margin-top: 30px;">Atentamente,<br><strong>El equipo de AppFichar</strong></p>
+                
+                <div class="lopd">
+                    ${footerLopd}
+                </div>
             </div>
             <div class="footer">
                 &copy; ${new Date().getFullYear()} AppFichar SaaS. Todos los derechos reservados.<br>
@@ -108,15 +119,29 @@ serve(async (req) => {
         })
     }
 
-    const fromEmail = Deno.env.get('RESEND_FROM') || 'AppFichar <onboarding@resend.dev>'
+    const fromEmail = Deno.env.get('RESEND_FROM') || 'AppFichar <notificaciones@app-fichar.com>'
     console.log('Using From Email:', fromEmail)
 
     try {
         const body = await req.json()
         console.log('Request body received:', JSON.stringify(body))
-        const { to, subject, html, text, type } = body
+        const { to, subject, html, text, type, tenant_id } = body
 
-        const finalHtml = type ? getEmailHtml(type, body) : html
+        let lopdText = null;
+        if (tenant_id && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+            const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+            const { data: branding } = await supabaseAdmin
+                .from('tenant_branding')
+                .select('email_data_protection_text')
+                .eq('tenant_id', tenant_id)
+                .maybeSingle();
+            
+            if (branding?.email_data_protection_text) {
+                lopdText = branding.email_data_protection_text;
+            }
+        }
+
+        const finalHtml = type ? getEmailHtml(type, body, lopdText) : html
 
         console.log('Attempting to send email via Resend to:', to, 'Type:', type || 'manual')
         const res = await fetch('https://api.resend.com/emails', {
@@ -135,8 +160,11 @@ serve(async (req) => {
         })
 
         const data = await res.json()
-        console.log('Resend API Response Status:', res.status)
-        console.log('Resend API Response Data:', JSON.stringify(data))
+        console.log('Resend API Full Response:', JSON.stringify({
+            status: res.status,
+            ok: res.ok,
+            data: data
+        }))
 
         if (!res.ok) {
             return new Response(JSON.stringify({
@@ -153,7 +181,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         })
-    } catch (error) {
+    } catch (error: any) {
         console.error('Edge Function Catch Error:', error.message)
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

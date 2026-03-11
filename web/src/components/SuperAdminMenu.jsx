@@ -282,9 +282,13 @@ export function SuperAdminMenu({ profile }) {
     const handleExportTenant = async (tenant) => {
         try {
             setLoading(true)
+            // Clean tenant object for export (remove joined counts/UI fields)
+            const cleanTenant = { ...tenant }
+            delete cleanTenant.profiles
+
             const backup = {
                 exported_at: new Date().toISOString(),
-                tenant: tenant,
+                tenant: cleanTenant,
                 branding: null,
                 profiles: [],
                 centers: [],
@@ -343,7 +347,7 @@ export function SuperAdminMenu({ profile }) {
         if (!confirm2) return
 
         const securityCode = prompt(`Escribe el nombre de la empresa (${tenant.name}) para confirmar el borrado definitivo:`)
-        if (securityCode !== tenant.name) {
+        if (securityCode?.trim().toLowerCase() !== tenant.name.trim().toLowerCase()) {
             alert('El nombre no coincide. Operación cancelada.')
             return
         }
@@ -388,9 +392,13 @@ export function SuperAdminMenu({ profile }) {
                 }
 
                 // 1. Restore Tenant
+                const tenantToRestore = { ...backup.tenant }
+                // Remove UI fields that might be in old or new backups
+                delete tenantToRestore.profiles
+
                 const { data: tenant, error: tErr } = await supabase
                     .from('tenants')
-                    .upsert([backup.tenant])
+                    .upsert([tenantToRestore])
                     .select()
                     .single()
 
@@ -760,10 +768,10 @@ export function SuperAdminMenu({ profile }) {
                     .tabs-scroll button { padding: 0.4rem 0.6rem !important; font-size: 0.75rem !important; }
                 }
             `}</style>
-            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                    <h2 style={{ margin: 0, color: '#4f46e5' }}>🛡️ Panel de Super-Administrador</h2>
-                    <p className="text-muted">Gestión global de todas las empresas y usuarios</p>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', width: '100%' }}>
+                <div style={{ flex: '1 1 200px' }}>
+                    <h2 style={{ margin: 0, color: '#4f46e5' }}>🛡️ Panel Super-Admin</h2>
+                    <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>Gestión global de empresas</p>
                 </div>
                 <div className="btn-stack" style={{ display: 'flex', gap: '0.5rem' }}>
                     <button

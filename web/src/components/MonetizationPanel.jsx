@@ -15,6 +15,7 @@ export function MonetizationPanel() {
     const [selectedTenant, setSelectedTenant] = useState(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [mrrData, setMrrData] = useState({ total: 0, arr: 0, pending: 0 });
+    const [editingPlan, setEditingPlan] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -49,6 +50,22 @@ export function MonetizationPanel() {
         }
     };
 
+    const handleTenantFieldUpdate = async (tenantId, field, value) => {
+        const { error } = await supabase
+            .from('tenants')
+            .update({ [field]: value })
+            .eq('id', tenantId);
+
+        if (!error) {
+            fetchData();
+            if (selectedTenant?.id === tenantId) {
+                setSelectedTenant({ ...selectedTenant, [field]: value });
+            }
+        } else {
+            alert('Error actualizando campo: ' + error.message);
+        }
+    };
+
     const handleUpdateStatus = async (tenantId, newStatus) => {
         const { error } = await supabase
             .from('tenants')
@@ -80,6 +97,7 @@ export function MonetizationPanel() {
                             type: 'license_suspended',
                             subject: '⚠️ IMPORTANTE: Acceso a AppFichar Suspendido',
                             to: admins.map(a => a.email),
+                            tenant_id: tenantId,
                         }
                     });
                     if (funcError) console.error('Error enviando email suspension:', funcError);
@@ -140,6 +158,7 @@ export function MonetizationPanel() {
                     type: 'billing_notice',
                     subject: '🧾 Aviso de Pago Pendiente - AppFichar',
                     to: activeAdmins.map(a => a.email),
+                    tenant_id: tenant.id,
                 }
             });
 
@@ -172,6 +191,33 @@ export function MonetizationPanel() {
         } catch (error) {
             console.error('Error enviando aviso:', error);
             alert('Error al enviar el aviso: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSavePlan = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('subscription_plans')
+                .update({
+                    name: editingPlan.name,
+                    price_monthly: parseFloat(editingPlan.price_monthly),
+                    max_employees: editingPlan.max_employees ? parseInt(editingPlan.max_employees) : null,
+                    description: editingPlan.description
+                })
+                .eq('id', editingPlan.id);
+
+            if (error) throw error;
+
+            setEditingPlan(null);
+            fetchData();
+            alert('✅ Plan actualizado correctamente.');
+        } catch (error) {
+            console.error('Error actualizando plan:', error);
+            alert('Error al actualizar plan: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -212,6 +258,7 @@ export function MonetizationPanel() {
                             type: 'plan_change',
                             subject: `✨ AppFichar: Su plan ha sido actualizado a ${planName}`,
                             to: activeAdmins.map(a => a.email),
+                            tenant_id: tenantId,
                         }
                     });
                 }
@@ -376,9 +423,21 @@ export function MonetizationPanel() {
             {view === 'plans' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
                     {plans.map(plan => (
-                        <div key={plan.id} className="card" style={{ border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+                        <div key={plan.id} className="card" style={{ border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                            <button
+                                onClick={() => setEditingPlan({ ...plan })}
+                                style={{
+                                    position: 'absolute', top: '10px', right: '10px',
+                                    padding: '0.25rem 0.5rem', fontSize: '0.7rem',
+                                    borderRadius: '4px', border: '1px solid #cbd5e1',
+                                    backgroundColor: 'white', cursor: 'pointer'
+                                }}
+                            >
+                                ✏️ Editar
+                            </button>
                             <h3 style={{ margin: 0, color: '#1e293b' }}>{plan.name}</h3>
                             <div style={{ fontSize: '2rem', fontWeight: '800', margin: '1rem 0', color: '#4f46e5' }}>{plan.price_monthly}€<span style={{ fontSize: '0.875rem', color: '#64748b' }}>/mes</span></div>
+                            <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem' }}>{plan.description || 'Sin descripción'}</div>
                             <div style={{ flex: 1 }}>
                                 <ul style={{ paddingLeft: '1.25rem', color: '#475569', fontSize: '0.875rem' }}>
                                     <li>Hasta {plan.max_employees || '∞'} empleados</li>
@@ -483,8 +542,31 @@ export function MonetizationPanel() {
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                                     <span style={{ color: '#475569' }}>Estado Actual:</span>
-                                    <StatusBadge status={selectedTenant.subscription_status} />
+                                    <select
+                                        className="input"
+                                        style={{ width: 'auto', padding: '4px 12px', fontSize: '0.875rem', borderRadius: '8px' }}
+                                        value={selectedTenant.subscription_status}
+                                        onChange={(e) => handleUpdateStatus(selectedTenant.id, e.target.value)}
+                                    >
+                                        <option value="active">Activo</option>
+                                        <option value="trial">En Prueba</option>
+                                        <option value="expired">Vencido</option>
+                                        <option value="suspended">Suspendido</option>
+                                    </select>
                                 </div>
+
+                                {selectedTenant.subscription_status === 'trial' && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                                        <span style={{ color: '#475569' }}>Fin de Prueba:</span>
+                                        <input
+                                            type="date"
+                                            className="input"
+                                            style={{ width: 'auto', padding: '4px 8px', fontSize: '0.875rem' }}
+                                            value={selectedTenant.trial_end_date || ''}
+                                            onChange={(e) => handleTenantFieldUpdate(selectedTenant.id, 'trial_end_date', e.target.value)}
+                                        />
+                                    </div>
+                                )}
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                                     <span style={{ color: '#475569' }}>Plan Contratado:</span>
@@ -500,7 +582,13 @@ export function MonetizationPanel() {
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span style={{ color: '#475569' }}>Próxima Factura:</span>
-                                    <strong style={{ color: '#1e293b' }}>{selectedTenant.next_billing_date ? format(new Date(selectedTenant.next_billing_date), 'dd/MM/yyyy') : '---'}</strong>
+                                    <input
+                                        type="date"
+                                        className="input"
+                                        style={{ width: 'auto', padding: '4px 8px', fontSize: '0.875rem' }}
+                                        value={selectedTenant.next_billing_date || ''}
+                                        onChange={(e) => handleTenantFieldUpdate(selectedTenant.id, 'next_billing_date', e.target.value)}
+                                    />
                                 </div>
                             </section>
 
@@ -553,6 +641,71 @@ export function MonetizationPanel() {
                     h1 { font-size: 1.5rem; }
                 }
             `}</style>
+            {/* MODAL: EDIT PLAN */}
+            {editingPlan && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center',
+                    alignItems: 'center', zIndex: 1000, padding: '1rem'
+                }}>
+                    <div className="card" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h2 style={{ margin: 0 }}>Editar Plan: {editingPlan.id}</h2>
+                            <button onClick={() => setEditingPlan(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
+                        </div>
+
+                        <form onSubmit={handleSavePlan}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>Nombre del Plan</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={editingPlan.name}
+                                    onChange={e => setEditingPlan({ ...editingPlan, name: e.target.value })}
+                                    required
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>Precio Mensual (€)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    className="input"
+                                    value={editingPlan.price_monthly}
+                                    onChange={e => setEditingPlan({ ...editingPlan, price_monthly: e.target.value })}
+                                    required
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>Límite de Empleados (Vacio = Sin limite)</label>
+                                <input
+                                    type="number"
+                                    className="input"
+                                    value={editingPlan.max_employees || ''}
+                                    onChange={e => setEditingPlan({ ...editingPlan, max_employees: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>Descripción</label>
+                                <textarea
+                                    className="input"
+                                    style={{ minHeight: '80px', paddingTop: '0.5rem' }}
+                                    value={editingPlan.description || ''}
+                                    onChange={e => setEditingPlan({ ...editingPlan, description: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                                <button type="button" onClick={() => setEditingPlan(null)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

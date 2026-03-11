@@ -390,7 +390,7 @@ function Dashboard({ session }) {
                 if (data.tenant_id) {
                     const { data: tenantData } = await supabase
                         .from('tenants')
-                        .select('name')
+                        .select('name, subscription_status')
                         .eq('id', data.tenant_id)
                         .single()
                     setTenant(tenantData)
@@ -458,6 +458,43 @@ function Dashboard({ session }) {
     }
 
     if (loading) return <div className="container">Cargando...</div>
+
+    // License Control Enforcement
+    const isLicenseActive = tenant?.subscription_status === 'active' || tenant?.subscription_status === 'trial';
+    const isSuperAdmin = profile?.role === 'super_admin';
+
+    if (!isLicenseActive && !isSuperAdmin && profile) {
+        return (
+            <div className="container" style={{ textAlign: 'center', marginTop: '4rem' }}>
+                <div className="card" style={{ border: '2px solid #e11d48', padding: '2.5rem' }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
+                    <h2 style={{ color: '#e11d48', marginTop: 0 }}>Acceso Restringido</h2>
+                    <p style={{ fontSize: '1.1rem', color: '#4b5563', lineHeight: '1.6' }}>
+                        La licencia de <strong>{tenant?.name || 'su empresa'}</strong> se encuentra
+                        {tenant?.subscription_status === 'suspended' ? ' actualmente SUSPENDIDA.' : ' VENCIDA.'}
+                    </p>
+                    <div style={{ backgroundColor: '#fff1f2', padding: '1rem', borderRadius: '8px', margin: '1.5rem 0', textAlign: 'left', border: '1px solid #fecaca' }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
+                            <strong>Pasos para restaurar el acceso:</strong>
+                            <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+                                {profile?.role === 'admin' ? (
+                                    <>
+                                        <li>Revise sus facturas pendientes en el sistema de pagos.</li>
+                                        <li>Póngase en contacto con el departamento comercial de AppFichar.</li>
+                                    </>
+                                ) : (
+                                    <li>Contacte con el administrador de su empresa para regularizar la situación.</li>
+                                )}
+                            </ul>
+                        </p>
+                    </div>
+                    <button className="btn btn-secondary" onClick={() => supabase.auth.signOut()}>
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // Onboarding Wizard Overlay for new Admins
     if (showOnboarding && profile?.role === 'admin') {

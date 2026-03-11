@@ -19,6 +19,7 @@ export function CompanySettings({ profile, onComplete }) {
     const [secondaryColor, setSecondaryColor] = useState('#10b981')
     const [logo, setLogo] = useState(null)
     const [logoPreview, setLogoPreview] = useState(null)
+    const [emailDataProtectionText, setEmailDataProtectionText] = useState('')
     const [holidays, setHolidays] = useState([])
     const [newHolidayDate, setNewHolidayDate] = useState('')
     const [newHolidayName, setNewHolidayName] = useState('')
@@ -82,6 +83,7 @@ export function CompanySettings({ profile, onComplete }) {
                 setPrimaryColor(brandingData.primary_color || '#3b82f6')
                 setSecondaryColor(brandingData.secondary_color || '#10b981')
                 setLogoPreview(brandingData.logo_path)
+                setEmailDataProtectionText(brandingData.email_data_protection_text || '')
             }
 
         } catch (err) {
@@ -253,6 +255,7 @@ export function CompanySettings({ profile, onComplete }) {
                     logo_path: logoUrl,
                     primary_color: primaryColor,
                     secondary_color: secondaryColor,
+                    email_data_protection_text: emailDataProtectionText,
                     updated_at: new Date().toISOString()
                 })
 
@@ -420,6 +423,27 @@ export function CompanySettings({ profile, onComplete }) {
                         />
                     </div>
                 </div>
+
+                <label style={{ display: 'block', marginTop: '1.5rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                    Texto de Protección de Datos (Email)
+                </label>
+                <textarea
+                    value={emailDataProtectionText}
+                    onChange={(e) => setEmailDataProtectionText(e.target.value)}
+                    placeholder="Texto legal que aparecerá al pie de los correos electrónicos..."
+                    style={{
+                        padding: '0.5rem',
+                        borderRadius: '4px',
+                        border: '1px solid var(--border-color)',
+                        width: '100%',
+                        fontSize: '0.875rem',
+                        minHeight: '100px',
+                        fontFamily: 'inherit'
+                    }}
+                />
+                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
+                    Si se deja vacío, se usará un texto genérico legal estándar.
+                </p>
             </div>
 
             {/* Festive Days Management */}
