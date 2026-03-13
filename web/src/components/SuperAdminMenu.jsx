@@ -226,14 +226,11 @@ export function SuperAdminMenu({ profile }) {
     const handleResendInvitation = async (email) => {
         try {
             setLoading(true)
-            const { error } = await supabase.auth.signInWithOtp({
-                email: email.toLowerCase().trim(),
-                options: {
-                    emailRedirectTo: getRedirectUrl()
-                }
+            const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+                redirectTo: getRedirectUrl()
             })
             if (error) throw error
-            alert('✅ Enlace de acceso reenviado a ' + email)
+            alert('✅ Enlace de activación (reset de clave) reenviado a ' + email)
         } catch (err) {
             alert('Error al reenviar: ' + err.message)
         } finally {
@@ -509,12 +506,9 @@ export function SuperAdminMenu({ profile }) {
 
             if (iErr) throw iErr
 
-            // 3. Send Magic Link to Admin
-            const { error: authErr } = await supabase.auth.signInWithOtp({
-                email: newTenantData.admin_email.toLowerCase().trim(),
-                options: {
-                    emailRedirectTo: getRedirectUrl()
-                }
+            // 3. Send activation link to Admin
+            const { error: authErr } = await supabase.auth.resetPasswordForEmail(newTenantData.admin_email.toLowerCase().trim(), {
+                redirectTo: getRedirectUrl()
             })
 
             if (authErr) throw authErr
@@ -697,9 +691,9 @@ export function SuperAdminMenu({ profile }) {
                                                         color: '#047857',
                                                         borderColor: '#a7f3d0'
                                                     }}
-                                                    title="Reenviar Invitación"
+                                                    title="Enviar Enlace de Activación (Password Reset)"
                                                 >
-                                                    📧 Reenviar
+                                                    🔑 Reactivar
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteInvitation(inv.id)}

@@ -237,110 +237,199 @@ function AppInner() {
 function Auth() {
     const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('')
-    const [token, setToken] = useState('')
-    const [step, setStep] = useState('email') // email | otp
+    const [password, setPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [authView, setAuthView] = useState('login') // login | signup | recovery | update_password
 
-    const handleLoginEmail = async (event) => {
-        event.preventDefault()
-        if (!email) return
-
-        setLoading(true)
-        try {
-            const { error } = await supabase.auth.signInWithOtp({
-                email: email.toLowerCase().trim(),
-                options: {
-                    emailRedirectTo: getRedirectUrl()
-                }
-            })
-
-            if (error) {
-                // Detailed error mapping
-                if (error.message.includes('rate limit')) {
-                    alert('⚠️ Límite de correos alcanzado. Por favor, espera una hora antes de volver a intentarlo.')
-                } else {
-                    alert('Error al enviar acceso: ' + error.message)
-                }
-            } else {
-                setStep('otp')
+    useEffect(() => {
+        // Handle password recovery event
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                setAuthView('update_password')
             }
-        } catch (err) {
-            alert('Error crítico: ' + err.message)
-        } finally {
-            setLoading(false)
-        }
+        })
+        return () => subscription.unsubscribe()
+    }, [])
+
+    const handleSignIn = async (e) => {
+        e.preventDefault()
+        setLoading(true)
+        const { error } = await supabase.auth.signInWithPassword({
+            email: email.toLowerCase().trim(),
+            password
+        })
+        if (error) alert('Error: ' + error.message)
+        setLoading(false)
     }
 
-    const handleVerifyOtp = async (event) => {
-        event.preventDefault()
+    const handleSignUp = async (e) => {
+        e.preventDefault()
+        if (password !== confirmPassword) {
+            alert('Las contraseñas no coinciden')
+            return
+        }
         setLoading(true)
-        const { error } = await supabase.auth.verifyOtp({
-            email,
-            token,
-            type: 'magiclink'
+        const { error } = await supabase.auth.signUp({
+            email: email.toLowerCase().trim(),
+            password,
+            options: {
+                emailRedirectTo: getRedirectUrl()
+            }
         })
-        if (error) alert('Error: Código no válido o caducado')
+        if (error) {
+            alert('Error al registrarse: ' + error.message)
+        } else {
+            alert('✅ ¡Registro completado! Verifica tu email para confirmar la cuenta (si es necesario) e inicia sesión.')
+            setAuthView('login')
+        }
+        setLoading(false)
+    }
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault()
+        setLoading(true)
+        const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+            redirectTo: getRedirectUrl()
+        })
+        if (error) alert('Error: ' + error.message)
+        else alert('✅ Se ha enviado un enlace para restablecer tu contraseña a tu email.')
+        setLoading(false)
+    }
+
+    const handleUpdatePassword = async (e) => {
+        e.preventDefault()
+        if (password !== confirmPassword) {
+            alert('Las contraseñas no coinciden')
+            return
+        }
+        setLoading(true)
+        const { error } = await supabase.auth.updateUser({ password })
+        if (error) alert('Error: ' + error.message)
+        else {
+            alert('✅ Contraseña actualizada correctamente. Ya puedes iniciar sesión.')
+            setAuthView('login')
+        }
         setLoading(false)
     }
 
     return (
         <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="auth-card card" style={{ margin: 'auto' }}>
+            <div className="auth-card card" style={{ margin: 'auto', width: '100%', maxWidth: '400px' }}>
                 <h1>Fichar App</h1>
-                <div key={step}>
-                    {step === 'email' ? (
-                        <>
-                            <p>Inicia sesión con tu email</p>
-                            <form onSubmit={handleLoginEmail}>
-                                <input
-                                    className="input"
-                                    type="email"
-                                    placeholder="Tu correo electrónico"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    autoFocus
-                                    required
-                                />
-                                <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
-                                    {loading ? 'Enviando...' : 'Enviar Acceso'}
-                                </button>
-                            </form>
-                        </>
-                    ) : (
-                        <>
-                            <p>Introduce el código enviado a <strong>{email}</strong></p>
-                            <form onSubmit={handleVerifyOtp}>
-                                <input
-                                    className="input"
-                                    type="text"
-                                    placeholder="000000"
-                                    value={token}
-                                    onChange={(e) => setToken(e.target.value.replace(/\D/g, ''))}
-                                    autoFocus
-                                    style={{
-                                        textAlign: 'center',
-                                        fontSize: '2rem',
-                                        letterSpacing: '0.5rem',
-                                        fontWeight: 'bold'
-                                    }}
-                                    maxLength={10}
-                                    required
-                                />
-                                <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
-                                    {loading ? 'Verificando...' : 'Entrar en la App'}
-                                </button>
-                                <button
-                                    className="btn btn-secondary"
-                                    type="button"
-                                    onClick={() => setStep('email')}
-                                    style={{ width: '100%', marginTop: '0.5rem', backgroundColor: 'transparent', color: 'var(--text-muted)' }}
-                                >
-                                    Volver a intentar con otro email
-                                </button>
-                            </form>
-                        </>
-                    )}
-                </div>
-                {loading && <div style={{ marginTop: '1rem', color: 'var(--primary-color)' }}>Cargando...</div>}
+
+                {authView === 'login' && (
+                    <form onSubmit={handleSignIn}>
+                        <p>Inicia sesión con tu cuenta</p>
+                        <input
+                            className="input"
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        <input
+                            className="input"
+                            type="password"
+                            placeholder="Contraseña"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            style={{ marginTop: '0.5rem' }}
+                            required
+                        />
+                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
+                            {loading ? 'Entrando...' : 'Iniciar Sesión'}
+                        </button>
+                        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                            <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('signup') }}>Crear cuenta</a>
+                            <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('recovery') }}>¿Olvidaste tu contraseña?</a>
+                        </div>
+                    </form>
+                )}
+
+                {authView === 'signup' && (
+                    <form onSubmit={handleSignUp}>
+                        <p>Crea tu nueva cuenta</p>
+                        <input
+                            className="input"
+                            type="email"
+                            placeholder="Email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        <input
+                            className="input"
+                            type="password"
+                            placeholder="Contraseña"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            style={{ marginTop: '0.5rem' }}
+                            required
+                        />
+                        <input
+                            className="input"
+                            type="password"
+                            placeholder="Repetir contraseña"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            style={{ marginTop: '0.5rem' }}
+                            required
+                        />
+                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
+                            {loading ? 'Registrando...' : 'Registrarse'}
+                        </button>
+                        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
+                            ¿Ya tienes cuenta? <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('login') }}>Inicia sesión</a>
+                        </div>
+                    </form>
+                )}
+
+                {authView === 'recovery' && (
+                    <form onSubmit={handleResetPassword}>
+                        <p>Recuperar contraseña</p>
+                        <input
+                            className="input"
+                            type="email"
+                            placeholder="Introduce tu email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
+                            {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+                        </button>
+                        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
+                            <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('login') }}>Volver al login</a>
+                        </div>
+                    </form>
+                )}
+
+                {authView === 'update_password' && (
+                    <form onSubmit={handleUpdatePassword}>
+                        <p>Establece tu nueva contraseña</p>
+                        <input
+                            className="input"
+                            type="password"
+                            placeholder="Nueva contraseña"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                        <input
+                            className="input"
+                            type="password"
+                            placeholder="Repetir nueva contraseña"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            style={{ marginTop: '0.5rem' }}
+                            required
+                        />
+                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
+                            {loading ? 'Guardando...' : 'Actualizar Contraseña'}
+                        </button>
+                    </form>
+                )}
             </div>
         </div>
     )

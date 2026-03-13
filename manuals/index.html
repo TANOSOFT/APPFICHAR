@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - AppFichar</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">AppFichar <span>Manuales</span></div>
+        <div class="header-links">
+            <a href="https://app-fichar.com" class="badge badge-admin" style="text-decoration: none;">Volver a la App</a>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside>
+            <h3>General</h3>
+            <ul>
+                <li><a href="#intro" class="active">Introducción</a></li>
+            </ul>
+
+            <h3>Manual de Empleado</h3>
+            <ul>
+                <li><a href="#emp-onboarding">Primeros Pasos</a></li>
+                <li><a href="#emp-jornada">Control de Jornada</a></li>
+                <li><a href="#emp-pausas">Gestión de Pausas</a></li>
+                <li><a href="#emp-ausencias">Ausencias y Vacaciones</a></li>
+                <li><a href="#emp-correcciones">Solicitud de Correcciones</a></li>
+            </ul>
+
+            <h3>Manual de Administrador</h3>
+            <ul>
+                <li><a href="#admin-setup">Configuración Inicial</a></li>
+                <li><a href="#admin-branding">Personalización y LOPD</a></li>
+                <li><a href="#admin-equipo">Gestión de Empleados</a></li>
+                <li><a href="#admin-revision">Revisión y Aprobaciones</a></li>
+                <li><a href="#admin-informes">Informes y Analítica</a></li>
+                <li><a href="#admin-pagos">Suscripción y Pagos</a></li>
+            </ul>
+        </aside>
+
+        <main>
+            <section id="intro">
+                <span class="badge badge-admin">General</span>
+                <h1>Bienvenido a AppFichar</h1>
+                <p>AppFichar es una plataforma integral diseñada para facilitar el cumplimiento de la normativa de registro de jornada (Art. 34.9 ET) de forma sencilla, moderna y eficiente.</p>
+                <div class="card">
+                    <strong>Acceso multiplataforma:</strong> Puede utilizar la aplicación desde su dispositivo móvil (iOS/Android) o desde cualquier navegador web moderno.
+                </div>
+            </section>
+
+            <!-- EMPLOYEE SECTION -->
+            <section id="emp-onboarding">
+                <span class="badge badge-employee">Empleado</span>
+                <h1>Primeros Pasos del Empleado</h1>
+                <p>Antes de empezar a registrar su jornada, deberá completar su proceso de alta en la plataforma.</p>
+                
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div>
+                        <h3>Recibir la Invitación</h3>
+                        <p>Recibirá un correo electrónico de AppFichar con un enlace de acceso directo. No es necesario recordar contraseñas complicadas.</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div>
+                        <h3>Completar su Perfil</h3>
+                        <p>Al acceder por primera vez, verifique que su nombre, DNI y correo electrónico son correctos. Estos datos son obligatorios para la validez legal del registro.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-container">
+                    <img src="assets/login.png" alt="Pantalla de inicio de sesión" class="screenshot">
+                    <p class="caption">Ejemplo de la pantalla de inicio de sesión con Magic Link.</p>
+                </div>
+            </section>
+
+            <section id="emp-jornada">
+                <span class="badge badge-employee">Empleado</span>
+                <h1>Control de Jornada Diaria</h1>
+                <p>El registro de jornada es una obligación legal y debe realizarse en tiempo real al inicio y fin de cada turno.</p>
+                
+                <div class="card">
+                    <h3>Cómo Fichar</h3>
+                    <p>En el panel principal, pulse el botón <strong>"Entrar"</strong> al iniciar su trabajo. El sistema registrará la hora exacta.</p>
+                    <p>Al terminar su jornada, no olvide pulsar <strong>"Salir"</strong> para cerrar el registro del día.</p>
+                </div>
+
+                <div class="screenshot-container">
+                    <img src="assets/dashboard.png" alt="Panel de control del empleado" class="screenshot">
+                    <p class="caption">Vista principal del empleado con los botones de control de jornada.</p>
+                </div>
+
+                <div class="tip">
+                    <strong>¡Ojo!</strong> Si olvida la salida, el sistema le enviará una notificación al móvil (si tiene la App instalada) para recordárselo.
+                </div>
+            </section>
+
+            <section id="emp-pausas">
+                <span class="badge badge-employee">Empleado</span>
+                <h1>Gestión de Pausas</h1>
+                <p>Las pausas (comidas, descansos, etc.) deben registrarse para calcular correctamente las horas efectivas de trabajo.</p>
+                <ul>
+                    <li>Pulse <strong>"Iniciar Descanso"</strong> para detener el contador.</li>
+                    <li>Pulse <strong>"Reanudar"</strong> cuando termine su descanso para volver a computar tiempo de trabajo.</li>
+                </ul>
+            </section>
+
+            <section id="emp-ausencias">
+                <span class="badge badge-employee">Empleado</span>
+                <h1>Ausencias y Vacaciones</h1>
+                <p>Desde la pestaña de "Ausencias", puede solicitar periodos de vacaciones o informar de bajas médicas.</p>
+                
+                <div class="screenshot-container">
+                    <img src="assets/absence.png" alt="Formulario de ausencia" class="screenshot">
+                    <p class="caption">Formulario para solicitar vacaciones y ausencias justificadas.</p>
+                </div>
+
+                <div class="card">
+                    <p>Seleccione las fechas, el tipo de ausencia (Vacaciones, Médico, Asuntos Propios) y adjunte un justificante si es necesario. Su administrador recibirá una notificación para aprobarla.</p>
+                </div>
+            </section>
+
+            <section id="emp-correcciones">
+                <span class="badge badge-employee">Empleado</span>
+                <h1>Solicitud de Correcciones</h1>
+                <p>Si olvidó fichar o cometió un error en una hora registrada, puede solicitar una corrección.</p>
+                <div class="tip">
+                    <strong>Importante:</strong> Las correcciones deben estar justificadas y requieren la aprobación de un administrador para ser efectivas.
+                </div>
+            </section>
+
+            <!-- ADMINISTRATOR SECTION -->
+            <section id="admin-setup">
+                <span class="badge badge-admin">Administrador</span>
+                <h1>Configuración Inicial del Tenant</h1>
+                <p>Como administrador, usted es el responsable de configurar el entorno de trabajo para su empresa.</p>
+                <div class="card">
+                    <h3>Datos Legales</h3>
+                    <p>Acceda a <strong>Configuración > Branding</strong> para establecer el Nombre Legal, CIF y dirección de la empresa. Estos datos aparecerán en los informes oficiales.</p>
+                </div>
+            </section>
+
+            <section id="admin-branding">
+                <span class="badge badge-admin">Administrador</span>
+                <h1>Personalización y LOPD</h1>
+                <p>Mantenga la identidad corporativa y cumpla con la protección de datos.</p>
+                <h3>Identidad Visual</h3>
+                <p>Suba el logotipo de su empresa y elija los colores corporativos para que los empleados se sientan en su propio entorno.</p>
+                
+                <h3>Protección de Datos (Nuevo)</h3>
+                <p>En el campo <strong>"Texto de Protección de Datos (Email)"</strong>, introduzca el aviso legal (LOPD) de su empresa. Este texto se incluirá automáticamente en el pie de todos los correos enviados por la plataforma.</p>
+                
+                <div class="screenshot-container">
+                    <img src="assets/branding.png" alt="Configuración de marca y LOPD" class="screenshot">
+                    <p class="caption">Sección de configuración donde se personaliza el texto legal para los emails.</p>
+                </div>
+            </section>
+
+            <section id="admin-equipo">
+                <span class="badge badge-admin">Administrador</span>
+                <h1>Gestión de Empleados e Invitaciones</h1>
+                <p>Invite y gestione a su equipo desde la pestaña "Invitar Empleados".</p>
+                
+                <div class="screenshot-container">
+                    <img src="assets/admin_invitar.png" alt="Invitar Empleados" class="screenshot">
+                    <p class="caption">Formulario para enviar invitaciones a nuevos miembros del equipo.</p>
+                </div>
+
+                <ul>
+                    <li><strong>Invitar:</strong> Introduzca el email, nombre, DNI y número de seguridad social.</li>
+                    <li><strong>Roles:</strong> Asigne roles de <em>Empleado</em>, <em>Manager</em> o <em>Admin</em>.</li>
+                </ul>
+            </section>
+
+            <section id="admin-revision">
+                <span class="badge badge-admin">Administrador</span>
+                <h1>Gestión de Ausencias y Correcciones</h1>
+                <p>La plataforma permite una gestión centralizada de todas las solicitudes.</p>
+                
+                <div class="screenshot-container">
+                    <img src="assets/admin_ausencias.png" alt="Gestionar Ausencias" class="screenshot">
+                    <p class="caption">Panel de gestión de ausencias y festivos configurables.</p>
+                </div>
+
+                <div class="card">
+                    <h3>Panel de Correcciones</h3>
+                    <p>Revise las solicitudes de cambio de horario de sus empleados. Puede ver el detalle completo antes de aprobar.</p>
+                </div>
+
+                <div class="screenshot-container">
+                    <img src="assets/admin_correccion.png" alt="Revisar Correcciones" class="screenshot">
+                    <p class="caption">Detalle de una solicitud de corrección de fichaje.</p>
+                </div>
+            </section>
+
+            <section id="admin-informes">
+                <span class="badge badge-admin">Administrador</span>
+                <h1>Informes y Analítica</h1>
+                <p>Genere documentación válida para inspecciones de trabajo y analice el rendimiento.</p>
+                
+                <div class="screenshot-container">
+                    <img src="assets/admin_reports.png" alt="Generar Reportes" class="screenshot">
+                    <p class="caption">Herramienta para exportar informes mensuales en PDF y Excel.</p>
+                </div>
+
+                <div class="screenshot-container">
+                    <img src="assets/admin_analytics.png" alt="Analítica" class="screenshot">
+                    <p class="caption">Panel de estadísticas comparativas de horas trabajadas por empleado.</p>
+                </div>
+            </section>
+
+            <section id="admin-pagos">
+                <span class="badge badge-admin">Administrador</span>
+                <h1>Suscripción y Pagos</h1>
+                <p>Gestione su plan desde el panel de facturación.</p>
+                <ul>
+                    <li>Mantenga sus datos de pago actualizados para evitar suspensiones.</li>
+                    <li>Descargue sus facturas en PDF directamente desde la sección de pagos.</li>
+                    <li>Cambie de plan según el crecimiento de su plantilla.</li>
+                </ul>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+</html>

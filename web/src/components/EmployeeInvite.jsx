@@ -92,9 +92,9 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
 
             if (otpError) {
                 console.warn('Invitación creada pero falló el envío del email:', otpError)
-                alert(`✅ Invitación creada para ${formData.email}, pero hubo un problema al enviar el email automáticamente.\n\nPuedes intentar reenviarlo desde la lista de "Invitaciones Pendientes" más abajo.`)
+                alert(`✅ Invitación creada para ${formData.email}, pero hubo un problema al enviar el email automáticamente.\n\nPuedes intentar enviar el enlace de activación desde la lista de "Invitaciones Pendientes" más abajo (ícono 🔑).`)
             } else {
-                alert(`✅ Invitación enviada con éxito a ${formData.email}\n\nEl empleado ha recibido un email con un enlace de acceso (Magic Link) para registrarse y acceder automáticamente a tu empresa.`)
+                alert(`✅ Invitación enviada con éxito a ${formData.email}\n\nEl empleado ha recibido un email con un enlace de acceso inicial para registrarse y establecer su contraseña.`)
             }
 
             // Reset form
@@ -144,14 +144,11 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
     const handleResendInvitation = async (email) => {
         try {
             setLoading(true)
-            const { error } = await supabase.auth.signInWithOtp({
-                email: email.toLowerCase().trim(),
-                options: {
-                    emailRedirectTo: getRedirectUrl()
-                }
+            const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+                redirectTo: getRedirectUrl()
             })
             if (error) throw error
-            alert('✅ Enlace de acceso reenviado a ' + email)
+            alert('✅ Enlace de activación (reset de clave) reenviado a ' + email)
         } catch (err) {
             alert('Error al reenviar: ' + err.message)
         } finally {
@@ -459,8 +456,8 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
                 <p style={{ margin: 0, fontSize: '0.875rem' }}>
                     <strong>ℹ️ Cómo funciona:</strong><br />
                     1. Creas la invitación con el email del empleado<br />
-                    2. El empleado se registra en la app con ese email usando el Magic Link<br />
-                    3. Al iniciar sesión, su perfil se crea automáticamente en tu empresa
+                    2. El empleado se registra o establece su contraseña usando el enlace enviado<br />
+                    3. Al iniciar sesión, su perfil se vincula automáticamente a tu empresa
                 </p>
             </div>
 
@@ -510,9 +507,9 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
                                                     onClick={() => handleResendInvitation(inv.email)}
                                                     className="btn btn-secondary"
                                                     style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', backgroundColor: '#ecfdf5', color: '#047857' }}
-                                                    title="Reenviar Email"
+                                                    title="Enviar Enlace de Activación (Password Reset)"
                                                 >
-                                                    📧
+                                                    🔑
                                                 </button>
                                                 <button
                                                     onClick={() => { setEditingInvitation({ ...inv }); setShowEditModal(true); }}
