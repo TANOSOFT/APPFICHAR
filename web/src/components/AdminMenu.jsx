@@ -12,6 +12,7 @@ export function AdminMenu({ profile, userId, initialTab = 'reports', onComplete,
     // Persist active tab in localStorage to survive accidental refreshes or state loss
     const storageKey = `admin_active_tab_${userId}`;
     const [activeTab, setActiveTab] = useState(() => {
+        if (initialTab === 'branding') return 'branding';
         return localStorage.getItem(storageKey) || initialTab;
     });
 

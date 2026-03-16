@@ -573,6 +573,62 @@ function Dashboard({ session }) {
             setLoading(true)
             const { user } = session
 
+            // 1. Always check for pending invitations first (handles both new and returning users assigned to new companies)
+            const { data: invitation, error: inviteError } = await supabase
+                .from('pending_invitations')
+                .select('*')
+                .eq('email', user.email.toLowerCase().trim())
+                .eq('status', 'pending')
+                .maybeSingle()
+
+            if (inviteError) console.error('Error checking invitation:', inviteError)
+
+            if (invitation) {
+                // Check if profile exists (from previous tenant or auth trigger)
+                const { data: existingProfile } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('id', user.id)
+                    .maybeSingle()
+
+                if (existingProfile) {
+                    // Update existing profile with new tenant
+                    await supabase
+                        .from('profiles')
+                        .update({
+                            tenant_id: invitation.tenant_id,
+                            role: invitation.role,
+                            active: true
+                        })
+                        .eq('id', user.id)
+                } else {
+                    // Create new profile
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .insert([{
+                            id: user.id,
+                            tenant_id: invitation.tenant_id,
+                            email: invitation.email,
+                            full_name: invitation.full_name,
+                            employee_code: invitation.employee_code,
+                            role: invitation.role,
+                            active: true
+                        }])
+
+                    if (profileError) {
+                        console.error('Error creating profile from invitation:', profileError)
+                        throw profileError
+                    }
+                }
+
+                // Mark invitation as accepted
+                await supabase
+                    .from('pending_invitations')
+                    .update({ status: 'accepted' })
+                    .eq('id', invitation.id)
+            }
+
+            // 2. Now fetch the active profile state
             let { data, error, status } = await supabase
                 .from('profiles')
                 .select('*')
@@ -606,45 +662,6 @@ function Dashboard({ session }) {
                     if (data.role === 'admin' && !brandingData) {
                         setShowOnboarding(true)
                     }
-                }
-            } else {
-                // Check if user has a pending invitation
-                const { data: invitation, error: inviteError } = await supabase
-                    .from('pending_invitations')
-                    .select('*')
-                    .eq('email', user.email.toLowerCase().trim())
-                    .eq('status', 'pending')
-                    .maybeSingle()
-
-                if (inviteError) console.error('Error checking invitation:', inviteError)
-
-                if (invitation) {
-                    // Create profile from invitation
-                    const { error: profileError } = await supabase
-                        .from('profiles')
-                        .insert([{
-                            id: user.id,
-                            tenant_id: invitation.tenant_id,
-                            email: invitation.email,
-                            full_name: invitation.full_name,
-                            employee_code: invitation.employee_code,
-                            role: invitation.role,
-                            active: true
-                        }])
-
-                    if (profileError) {
-                        console.error('Error creating profile from invitation:', profileError)
-                        throw profileError
-                    }
-
-                    // Mark invitation as accepted
-                    await supabase
-                        .from('pending_invitations')
-                        .update({ status: 'accepted' })
-                        .eq('id', invitation.id)
-
-                    // Refresh profile
-                    getProfile()
                 }
             }
         } catch (error) {
