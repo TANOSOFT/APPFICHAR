@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { ReportGenerator } from './ReportGenerator'
 import { supabase } from '../lib/supabase'
+import { SignatureModal } from './SignatureModal'
 
 export function ReportsCollapsible({ userId, profile }) {
     const [expanded, setExpanded] = useState(false)
     const [documents, setDocuments] = useState([])
     const [loading, setLoading] = useState(false)
+    const [signingDoc, setSigningDoc] = useState(null)
 
     useEffect(() => {
         if (expanded) {
@@ -101,25 +103,51 @@ export function ReportsCollapsible({ userId, profile }) {
                                     }}>
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                             <span style={{ fontWeight: '600' }}>{doc.description || 'Sin descripción'}</span>
-                                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{doc.document_name}</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                {doc.document_name} {doc.is_signed && <span style={{ color: '#10b981', fontWeight: 'bold' }}>(FIRMADO)</span>}
+                                            </span>
                                         </div>
-                                        <button
-                                            onClick={() => downloadDoc(doc.file_path)}
-                                            className="btn"
-                                            style={{
-                                                padding: '0.25rem 0.75rem',
-                                                fontSize: '0.75rem',
-                                                backgroundColor: '#4f46e5',
-                                                color: 'white'
-                                            }}
-                                        >
-                                            ⬇️ Descargar
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            {doc.file_type === 'application/pdf' && !doc.is_signed && (
+                                                <button
+                                                    onClick={() => setSigningDoc(doc)}
+                                                    className="btn"
+                                                    style={{
+                                                        padding: '0.25rem 0.75rem',
+                                                        fontSize: '0.75rem',
+                                                        backgroundColor: '#10b981',
+                                                        color: 'white'
+                                                    }}
+                                                >
+                                                    ✍️ Firmar
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => downloadDoc(doc.file_path)}
+                                                className="btn"
+                                                style={{
+                                                    padding: '0.25rem 0.75rem',
+                                                    fontSize: '0.75rem',
+                                                    backgroundColor: doc.is_signed ? '#4f46e5' : '#6b7280',
+                                                    color: 'white'
+                                                }}
+                                            >
+                                                {doc.is_signed ? '⬇️ Ver Firmado' : '⬇️ Descargar'}
+                                            </button>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
                         )}
                     </div>
+                    {/* Signature Modal */}
+                    <SignatureModal
+                        isOpen={!!signingDoc}
+                        onClose={() => setSigningDoc(null)}
+                        document={signingDoc}
+                        userId={userId}
+                        onSigned={fetchMyDocuments}
+                    />
                 </div>
             )}
         </div>

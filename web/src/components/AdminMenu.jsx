@@ -9,7 +9,15 @@ import { CorrectionReview } from './CorrectionReview'
 import { AbsenceReview } from './AbsenceReview'
 
 export function AdminMenu({ profile, userId, initialTab = 'reports', onComplete, onRefresh }) {
-    const [activeTab, setActiveTab] = useState(initialTab)
+    // Persist active tab in localStorage to survive accidental refreshes or state loss
+    const storageKey = `admin_active_tab_${userId}`;
+    const [activeTab, setActiveTab] = useState(() => {
+        return localStorage.getItem(storageKey) || initialTab;
+    });
+
+    useEffect(() => {
+        localStorage.setItem(storageKey, activeTab);
+    }, [activeTab, storageKey]);
 
     // Listen for navigation events from notifications
     useEffect(() => {
@@ -69,6 +77,7 @@ export function AdminMenu({ profile, userId, initialTab = 'reports', onComplete,
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
+                        type="button"
                         onClick={() => setActiveTab(tab.id)}
                         style={{
                             flexShrink: 0,

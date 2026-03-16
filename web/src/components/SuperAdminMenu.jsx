@@ -581,6 +581,7 @@ export function SuperAdminMenu({ profile }) {
                             <thead>
                                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
                                     <th style={{ padding: '0.75rem' }}>Nombre</th>
+                                    <th style={{ padding: '0.75rem' }}>Email</th>
                                     <th style={{ padding: '0.75rem' }}>Rol Actual</th>
                                     <th style={{ padding: '0.75rem' }}>Cambiar Rol</th>
                                     <th style={{ padding: '0.75rem' }}>Acciones</th>
@@ -589,7 +590,7 @@ export function SuperAdminMenu({ profile }) {
                             <tbody>
                                 {tenantProfiles.length === 0 && (
                                     <tr>
-                                        <td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                                        <td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
                                             No hay usuarios registrados todavía en esta empresa.
                                         </td>
                                     </tr>
@@ -599,6 +600,9 @@ export function SuperAdminMenu({ profile }) {
                                         <td style={{ padding: '0.75rem' }}>
                                             <strong>{u.full_name}</strong>
                                             <div style={{ fontSize: '0.75rem', color: '#666' }}>{u.employee_code}</div>
+                                        </td>
+                                        <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#4b5563' }}>
+                                            {u.email || <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Sin sincronizar</span>}
                                         </td>
                                         <td style={{ padding: '0.75rem' }}>
                                             <span style={{

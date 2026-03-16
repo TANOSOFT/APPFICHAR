@@ -53,13 +53,36 @@ export function AdminDashboard({ profile }) {
     const [showInactive, setShowInactive] = useState(false)
 
     useEffect(() => {
+        console.log('[AdminDashboard] Component Mounted/Updated');
         if (profile?.tenant_id) {
-            fetchEmployees()
+            fetchEmployees().then(() => {
+                // Restore selection from localStorage after employees are loaded
+                const savedId = localStorage.getItem(`admin_selected_employee_${profile.tenant_id}`);
+                if (savedId && !selectedEmployee) {
+                    // We wait for the next render where 'employees' state is updated
+                }
+            })
         }
     }, [profile, showInactive])
 
+    // Effect to restore selected employee once list is loaded
+    useEffect(() => {
+        if (employees.length > 0 && !selectedEmployee) {
+            const savedId = localStorage.getItem(`admin_selected_employee_${profile.tenant_id}`);
+            if (savedId) {
+                const emp = employees.find(e => e.id === savedId);
+                if (emp) {
+                    console.log('[AdminDashboard] Restoring selection from storage:', emp.full_name);
+                    setSelectedEmployee(emp);
+                }
+            }
+        }
+    }, [employees, profile?.tenant_id])
+
     useEffect(() => {
         if (selectedEmployee) {
+            console.log('[AdminDashboard] Loading entries for:', selectedEmployee.full_name);
+            localStorage.setItem(`admin_selected_employee_${profile.tenant_id}`, selectedEmployee.id);
             fetchEmployeeEntries()
         }
     }, [selectedEmployee, selectedMonth])
@@ -688,7 +711,13 @@ export function AdminDashboard({ profile }) {
                     value={selectedEmployee?.id || ''}
                     onChange={(e) => {
                         const emp = employees.find(emp => emp.id === e.target.value)
+                        console.log('[AdminDashboard] Employee selected:', emp?.full_name);
                         setSelectedEmployee(emp)
+                        if (emp) {
+                            localStorage.setItem(`admin_selected_employee_${profile.tenant_id}`, emp.id);
+                        } else {
+                            localStorage.removeItem(`admin_selected_employee_${profile.tenant_id}`);
+                        }
                     }}
                     style={{
                         padding: '0.5rem',
@@ -708,6 +737,7 @@ export function AdminDashboard({ profile }) {
                 </select>
 
                 <button
+                    type="button"
                     onClick={generateBulkLaborReport}
                     disabled={loading}
                     className="btn btn-secondary"
@@ -730,6 +760,7 @@ export function AdminDashboard({ profile }) {
                                 <h4 style={{ margin: 0, color: '#374151' }}>📋 Información Laboral</h4>
                                 {selectedEmployee.role !== 'super_admin' && (
                                     <button
+                                        type="button"
                                         onClick={() => {
                                             setEditFormData({ ...selectedEmployee })
                                             setEditMode(true)
@@ -840,6 +871,7 @@ export function AdminDashboard({ profile }) {
                                 }}
                             />
                             <button
+                                type="button"
                                 onClick={generateEmployeePDF}
                                 disabled={loading || timeEntries.length === 0}
                                 className="btn btn-primary"
@@ -848,6 +880,7 @@ export function AdminDashboard({ profile }) {
                                 {loading ? 'Generando PDF...' : '📄 Generar PDF del Empleado'}
                             </button>
                             <button
+                                type="button"
                                 onClick={generateEmployeeExcel}
                                 disabled={loading || timeEntries.length === 0}
                                 className="btn btn-secondary"
@@ -856,6 +889,7 @@ export function AdminDashboard({ profile }) {
                                 {loading ? 'Generando Excel...' : '📊 Generar Excel del Empleado'}
                             </button>
                             <button
+                                type="button"
                                 onClick={toggleEmployeeStatus}
                                 disabled={loading}
                                 className="btn"
@@ -871,6 +905,7 @@ export function AdminDashboard({ profile }) {
                                 {loading ? 'Procesando...' : selectedEmployee.active ? '🚫 Desactivar Empleado' : '✅ Reactivar Empleado'}
                             </button>
                             <button
+                                type="button"
                                 onClick={deleteEmployee}
                                 disabled={loading}
                                 className="btn"

@@ -50,6 +50,7 @@ function App() {
 
 function AppInner() {
     const [session, setSession] = useState(null)
+    const [isRecovering, setIsRecovering] = useState(false)
 
     // Diagnostic log for version verification
     useEffect(() => {
@@ -68,6 +69,12 @@ function AppInner() {
                 const params = new URLSearchParams(url.hash.substring(1) || url.search)
                 const accessToken = params.get('access_token')
                 const refreshToken = params.get('refresh_token')
+                const type = params.get('type')
+
+                if (type === 'recovery') {
+                    console.log('Detected recovery type in URL')
+                    setIsRecovering(true)
+                }
 
                 if (accessToken && refreshToken) {
                     isProcessing = true
@@ -124,18 +131,32 @@ function AppInner() {
         // 3. Monitor Auth State changes
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange((event, session) => {
+        } = supabase.auth.onAuthStateChange((event, newSession) => {
             console.log('Auth event:', event)
-            if (session) {
-                setSession(session)
+            if (event === 'PASSWORD_RECOVERY') {
+                setIsRecovering(true)
+            }
+            if (newSession) {
+                // Stabilize session updates: only set if user ID changes or it's a fresh login
+                // Prevents re-renders on TOKEN_REFRESHED if handled by Supabase internally
+                setSession(prev => {
+                    if (prev?.user?.id === newSession?.user?.id && (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED')) {
+                        console.log('[App] Session stable, skipping update for:', event);
+                        return prev;
+                    }
+                    console.log('[App] Session updating for event:', event);
+                    return newSession;
+                })
             } else if (event === 'SIGNED_OUT') {
+                console.log('[App] SIGNED_OUT event detected');
                 setSession(null)
+                setIsRecovering(false)
             }
         })
 
         // 4. Persistence check
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) setSession(session)
+        supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+            if (existingSession) setSession(existingSession)
         })
 
         // 5. Mobile Notifications Setup
@@ -224,7 +245,9 @@ function AppInner() {
         }
     }, [])
 
-    const content = !session ? <Auth /> : <Dashboard session={session} />
+    const content = (isRecovering || !session) 
+        ? <Auth forceRecovery={isRecovering} onPasswordUpdated={() => setIsRecovering(false)} /> 
+        : <Dashboard session={session} />
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', position: 'relative' }}>
@@ -234,18 +257,68 @@ function AppInner() {
 }
 
 // Minimal Placeholder Components for MVP showcase
-function Auth() {
+function Auth({ forceRecovery, onPasswordUpdated }) {
     const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
-    const [authView, setAuthView] = useState('login') // login | signup | recovery | update_password
+    const [authView, setAuthView] = useState(forceRecovery ? 'update_password' : 'login')
+    const [branding, setBranding] = useState({
+        name: 'AppFichar',
+        logo: null
+    })
+
+    const tanosoftBranding = {
+        name: 'TANOSOft',
+        logo: 'https://app-fichar.com/wp-content/uploads/2024/01/logo-tanosoft.png' // Assumed or placeholder if not found
+    }
 
     useEffect(() => {
-        // Handle password recovery event
+        if (forceRecovery) {
+            setAuthView('update_password')
+            fetchContextBranding()
+        }
+    }, [forceRecovery])
+
+    const fetchContextBranding = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
+
+            // 1. Get Profile
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*, tenants(name)')
+                .eq('id', user.id)
+                .single()
+
+            if (profile) {
+                if (profile.role === 'super_admin') {
+                    setBranding(tanosoftBranding)
+                } else if (profile.tenant_id) {
+                    // Fetch tenant branding
+                    const { data: brandingData } = await supabase
+                        .from('tenant_branding')
+                        .select('*')
+                        .eq('tenant_id', profile.tenant_id)
+                        .maybeSingle()
+
+                    setBranding({
+                        name: profile.tenants?.name || 'Tu Empresa',
+                        logo: brandingData?.logo_path || null
+                    })
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching context branding:', err)
+        }
+    }
+
+    useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
             if (event === 'PASSWORD_RECOVERY') {
                 setAuthView('update_password')
+                fetchContextBranding()
             }
         })
         return () => subscription.unsubscribe()
@@ -306,127 +379,165 @@ function Auth() {
         const { error } = await supabase.auth.updateUser({ password })
         if (error) alert('Error: ' + error.message)
         else {
-            alert('✅ Contraseña actualizada correctamente. Ya puedes iniciar sesión.')
+            alert('✅ Contraseña actualizada correctamente. Ya puedes acceder.')
+            if (onPasswordUpdated) onPasswordUpdated()
             setAuthView('login')
         }
         setLoading(false)
     }
 
     return (
-        <div className="auth-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="auth-card card" style={{ margin: 'auto', width: '100%', maxWidth: '400px' }}>
-                <h1>Fichar App</h1>
+        <div className="auth-container">
+            <div className="auth-premium-card">
+                <div style={{ textAlign: 'center' }}>
+                    {branding.logo ? (
+                        <img src={branding.logo} alt={branding.name} className="auth-logo" />
+                    ) : (
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🕒</div>
+                    )}
+                    <h1 className="auth-title">{branding.name}</h1>
+                </div>
 
                 {authView === 'login' && (
                     <form onSubmit={handleSignIn}>
-                        <p>Inicia sesión con tu cuenta</p>
-                        <input
-                            className="input"
-                            type="email"
-                            placeholder="Email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                        <input
-                            className="input"
-                            type="password"
-                            placeholder="Contraseña"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{ marginTop: '0.5rem' }}
-                            required
-                        />
-                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
-                            {loading ? 'Entrando...' : 'Iniciar Sesión'}
+                        <p className="auth-subtitle">Inicia sesión para continuar</p>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Email</label>
+                            <input
+                                className="auth-input"
+                                type="email"
+                                placeholder="ejemplo@correo.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Contraseña</label>
+                            <input
+                                className="auth-input"
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button className="auth-btn-primary" disabled={loading}>
+                            {loading ? 'Cargando...' : 'Entrar'}
                         </button>
-                        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                            <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('signup') }}>Crear cuenta</a>
-                            <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('recovery') }}>¿Olvidaste tu contraseña?</a>
+                        <div className="auth-footer">
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <a href="#" className="auth-link" onClick={(e) => { e.preventDefault(); setAuthView('signup') }}>
+                                    Crear cuenta
+                                </a>
+                                <a href="#" className="auth-link" onClick={(e) => { e.preventDefault(); setAuthView('recovery') }}>
+                                    ¿Olvidaste tu clave?
+                                </a>
+                            </div>
                         </div>
                     </form>
                 )}
 
                 {authView === 'signup' && (
                     <form onSubmit={handleSignUp}>
-                        <p>Crea tu nueva cuenta</p>
-                        <input
-                            className="input"
-                            type="email"
-                            placeholder="Email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                        <input
-                            className="input"
-                            type="password"
-                            placeholder="Contraseña"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{ marginTop: '0.5rem' }}
-                            required
-                        />
-                        <input
-                            className="input"
-                            type="password"
-                            placeholder="Repetir contraseña"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{ marginTop: '0.5rem' }}
-                            required
-                        />
-                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
+                        <p className="auth-subtitle">Regístrate en la plataforma</p>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Email</label>
+                            <input
+                                className="auth-input"
+                                type="email"
+                                placeholder="ejemplo@correo.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Contraseña</label>
+                            <input
+                                className="auth-input"
+                                type="password"
+                                placeholder="Mínimo 6 caracteres"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Confirmar Contraseña</label>
+                            <input
+                                className="auth-input"
+                                type="password"
+                                placeholder="Repite tu contraseña"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button className="auth-btn-primary" disabled={loading}>
                             {loading ? 'Registrando...' : 'Registrarse'}
                         </button>
-                        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                            ¿Ya tienes cuenta? <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('login') }}>Inicia sesión</a>
+                        <div className="auth-footer">
+                            ¿Ya tienes cuenta? <a href="#" className="auth-link" onClick={(e) => { e.preventDefault(); setAuthView('login') }}>
+                                Inicia sesión
+                            </a>
                         </div>
                     </form>
                 )}
 
                 {authView === 'recovery' && (
                     <form onSubmit={handleResetPassword}>
-                        <p>Recuperar contraseña</p>
-                        <input
-                            className="input"
-                            type="email"
-                            placeholder="Introduce tu email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
-                            {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+                        <p className="auth-subtitle">Introduce tu email para recuperar tu acceso</p>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Email</label>
+                            <input
+                                className="auth-input"
+                                type="email"
+                                placeholder="ejemplo@correo.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button className="auth-btn-primary" disabled={loading}>
+                            {loading ? 'Enviando...' : 'Enviar enlace'}
                         </button>
-                        <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                            <a href="#" onClick={(e) => { e.preventDefault(); setAuthView('login') }}>Volver al login</a>
+                        <div className="auth-footer">
+                            <a href="#" className="auth-link" onClick={(e) => { e.preventDefault(); setAuthView('login') }}>
+                                Volver al inicio
+                            </a>
                         </div>
                     </form>
                 )}
 
                 {authView === 'update_password' && (
                     <form onSubmit={handleUpdatePassword}>
-                        <p>Establece tu nueva contraseña</p>
-                        <input
-                            className="input"
-                            type="password"
-                            placeholder="Nueva contraseña"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-                        <input
-                            className="input"
-                            type="password"
-                            placeholder="Repetir nueva contraseña"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{ marginTop: '0.5rem' }}
-                            required
-                        />
-                        <button className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
-                            {loading ? 'Guardando...' : 'Actualizar Contraseña'}
+                        <p className="auth-subtitle">Establece tu nueva contraseña segura</p>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Nueva Contraseña</label>
+                            <input
+                                className="auth-input"
+                                type="password"
+                                placeholder="Mínimo 6 caracteres"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="auth-input-group">
+                            <label className="auth-label">Confirmar Nueva Contraseña</label>
+                            <input
+                                className="auth-input"
+                                type="password"
+                                placeholder="Repite la contraseña"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button className="auth-btn-primary" disabled={loading}>
+                            {loading ? 'Guardando...' : 'Actualizar y Entrar'}
                         </button>
                     </form>
                 )}
@@ -546,7 +657,10 @@ function Dashboard({ session }) {
         setRefreshTrigger(prev => prev + 1)
     }
 
-    if (loading) return <div className="container">Cargando...</div>
+    // Stabilize: Only show initial loader if we don't have a profile yet
+    // This prevents unmounting the entire dashboard and losing internal state (like file pickers)
+    // during background profile refreshes.
+    if (loading && !profile) return <div className="container">Cargando...</div>
 
     // License Control Enforcement
     const isLicenseActive = tenant?.subscription_status === 'active' || tenant?.subscription_status === 'trial';
