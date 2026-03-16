@@ -593,7 +593,7 @@ function Dashboard({ session }) {
 
                 if (existingProfile) {
                     // Update existing profile with new tenant
-                    await supabase
+                    const { error: updateProfileErr } = await supabase
                         .from('profiles')
                         .update({
                             tenant_id: invitation.tenant_id,
@@ -601,6 +601,11 @@ function Dashboard({ session }) {
                             active: true
                         })
                         .eq('id', user.id)
+                        
+                    if (updateProfileErr) {
+                         console.error('CRITICAL: Failed to update existing profile to new tenant:', updateProfileErr)
+                         alert('Error al asignar perfil a la nueva empresa: ' + updateProfileErr.message)
+                    }
                 } else {
                     // Create new profile
                     const { error: profileError } = await supabase
@@ -617,15 +622,21 @@ function Dashboard({ session }) {
 
                     if (profileError) {
                         console.error('Error creating profile from invitation:', profileError)
+                        alert('Error al crear el perfil desde la invitación: ' + profileError.message)
                         throw profileError
                     }
                 }
 
                 // Mark invitation as accepted
-                await supabase
+                const { error: markAcceptedErr } = await supabase
                     .from('pending_invitations')
                     .update({ status: 'accepted' })
                     .eq('id', invitation.id)
+                    
+                if (markAcceptedErr) {
+                     console.error('CRITICAL: Failed to mark invitation as accepted:', markAcceptedErr)
+                     alert('Error al aceptar la invitación: ' + markAcceptedErr.message)
+                }
             }
 
             // 2. Now fetch the active profile state

@@ -1,20 +1,25 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-const supabaseUrl = 'https://dkhvjwvffjjnrtujsrnm.supabase.co'
-const supabaseKey = 'sb_publishable_6PdPKibeZxrFko5Gyi2gEQ_YGANX2K5'
+dotenv.config({ path: '.env.local' });
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function check() {
-    const { data, error } = await supabase.from('pending_invitations').select('*').limit(5)
-    if (error) {
-        console.error('Error:', error.message)
+async function checkPendingInvites() {
+    console.log('--- DIAGNOSTIC SCRIPT ---');
+    console.log('Querying pending_invitations...');
+    const { data: invites, error: inviteError } = await supabase
+        .from('pending_invitations')
+        .select('*');
+    if (inviteError) {
+        console.error('Error fetching invites:', inviteError);
     } else {
-        console.log('Invitations found:', data.length)
-        if (data.length > 0) {
-            console.log('Sample email:', data[0].email, 'Status:', data[0].status)
-        }
+        console.log('Pending Invites:', invites);
     }
+
+    console.log('-------------------------');
 }
 
-check()
+checkPendingInvites();
