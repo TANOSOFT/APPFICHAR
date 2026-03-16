@@ -625,6 +625,7 @@ function Dashboard({ session }) {
                         .insert([{
                             id: user.id,
                             tenant_id: invitation.tenant_id,
+                            email: invitation.email,
                             full_name: invitation.full_name,
                             employee_code: invitation.employee_code,
                             role: invitation.role,
@@ -639,7 +640,7 @@ function Dashboard({ session }) {
                     // Mark invitation as accepted
                     await supabase
                         .from('pending_invitations')
-                        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+                        .update({ status: 'accepted' })
                         .eq('id', invitation.id)
 
                     // Refresh profile
