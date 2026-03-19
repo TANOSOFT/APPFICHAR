@@ -1008,7 +1008,7 @@ export function AdminDashboard({ profile }) {
                                 </div>
                                 <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
                                     <span style={{ fontSize: '0.75rem', color: '#6b7280', display: 'block' }}>Días Fichados</span>
-                                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{timeEntries.length}</span>
+                                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>{[...new Set(timeEntries.map(e => e.work_date))].length}</span>
                                 </div>
                             </div>
                         </div>
