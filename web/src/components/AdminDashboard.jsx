@@ -52,6 +52,10 @@ export function AdminDashboard({ profile }) {
     const [editFormData, setEditFormData] = useState(null)
     const [showInactive, setShowInactive] = useState(false)
 
+    // Time entry editing state
+    const [editTimeEntry, setEditTimeEntry] = useState(null)
+    const [timeEntryFormData, setTimeEntryFormData] = useState({ start_at: '', end_at: '', admin_modification_reason: '' })
+
     useEffect(() => {
         console.log('[AdminDashboard] Component Mounted/Updated');
         if (profile?.tenant_id) {
@@ -182,6 +186,71 @@ export function AdminDashboard({ profile }) {
         const hours = Math.floor(totalWorkTime / (1000 * 60 * 60))
         const minutes = Math.floor((totalWorkTime % (1000 * 60 * 60)) / (1000 * 60))
         return `${hours}h ${minutes}m`
+    }
+
+    const formatDatetimeLocal = (isoString) => {
+        if (!isoString) return ''
+        const d = new Date(isoString)
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        return (new Date(d - tzOffset)).toISOString().slice(0, 16);
+    }
+
+    const handleEditTimeEntry = (entry) => {
+        setEditTimeEntry(entry)
+        setTimeEntryFormData({
+            start_at: formatDatetimeLocal(entry.start_at),
+            end_at: entry.end_at ? formatDatetimeLocal(entry.end_at) : '',
+            admin_modification_reason: entry.admin_modification_reason || ''
+        })
+    }
+
+    const submitTimeEntryEdit = async (e) => {
+        e.preventDefault()
+        if (!timeEntryFormData.admin_modification_reason.trim()) {
+            alert('Debes indicar el motivo de la corrección.')
+            return
+        }
+        if (!timeEntryFormData.start_at) {
+            alert('La hora de entrada no puede estar vacía.')
+            return
+        }
+
+        try {
+            setLoading(true)
+            
+            const startD = new Date(timeEntryFormData.start_at)
+            const startUtc = new Date(startD.getTime()).toISOString()
+            
+            let endUtc = null
+            if (timeEntryFormData.end_at) {
+                const endD = new Date(timeEntryFormData.end_at)
+                endUtc = new Date(endD.getTime()).toISOString()
+            }
+
+            const { error: updateErr } = await supabase
+                .from('time_entries')
+                .update({
+                    start_at: startUtc,
+                    end_at: endUtc,
+                    status: 'corrected',
+                    admin_modified_at: new Date().toISOString(),
+                    admin_modifier_id: profile.id,
+                    admin_modification_reason: timeEntryFormData.admin_modification_reason.trim()
+                })
+                .eq('id', editTimeEntry.id)
+
+            if (updateErr) throw updateErr
+
+            alert('✅ Fichaje actualizado correctamente.')
+            setEditTimeEntry(null)
+            fetchEmployeeEntries()
+            
+        } catch (err) {
+            console.error('Error updating entry:', err)
+            alert('Error al actualizar fichaje: ' + err.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     const calculateMonthlyTotal = () => {
@@ -963,6 +1032,7 @@ export function AdminDashboard({ profile }) {
                                                 <th style={{ padding: '0.75rem' }}>Salida</th>
                                                 <th style={{ padding: '0.75rem' }}>Pausas</th>
                                                 <th style={{ padding: '0.75rem' }}>Neto</th>
+                                                <th style={{ padding: '0.75rem' }}>Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -975,6 +1045,16 @@ export function AdminDashboard({ profile }) {
                                                         {entry.break_entries?.reduce((acc, brk) => brk.end_at ? acc + Math.floor((new Date(brk.end_at) - new Date(brk.start_at)) / 60000) : acc, 0) || 0}m
                                                     </td>
                                                     <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{formatDuration(entry.start_at, entry.end_at, entry.break_entries)}</td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => handleEditTimeEntry(entry)}
+                                                            className="btn btn-secondary" 
+                                                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                                                        >
+                                                            ✏️ Editar
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -1038,6 +1118,75 @@ export function AdminDashboard({ profile }) {
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                                 <button type="button" onClick={() => setEditMode(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
                                 <button type="submit" disabled={loading} className="btn btn-primary" style={{ flex: 1 }}>{loading ? 'Guardando...' : 'Guardar'}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Time Entry Edit Modal */}
+            {editTimeEntry && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 2000,
+                    padding: '1rem'
+                }}>
+                    <div style={{
+                        backgroundColor: '#fff',
+                        padding: '2rem',
+                        borderRadius: '12px',
+                        width: '100%',
+                        maxWidth: '500px',
+                        maxHeight: '90vh',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{ marginTop: 0 }}>✏️ Corregir Fichaje</h3>
+                        <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                            Fecha original: {format(new Date(editTimeEntry.work_date), 'dd/MM/yyyy')}
+                        </p>
+                        
+                        <form onSubmit={submitTimeEntryEdit}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Hora de Entrada *</label>
+                                    <input 
+                                        type="datetime-local" 
+                                        value={timeEntryFormData.start_at} 
+                                        onChange={e => setTimeEntryFormData({ ...timeEntryFormData, start_at: e.target.value })} 
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #d1d5db' }} 
+                                        required 
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Hora de Salida</label>
+                                    <input 
+                                        type="datetime-local" 
+                                        value={timeEntryFormData.end_at} 
+                                        onChange={e => setTimeEntryFormData({ ...timeEntryFormData, end_at: e.target.value })} 
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #d1d5db' }} 
+                                    />
+                                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Dejar en blanco si sigue trabajando.</span>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Motivo de la corrección *</label>
+                                    <textarea 
+                                        value={timeEntryFormData.admin_modification_reason} 
+                                        onChange={e => setTimeEntryFormData({ ...timeEntryFormData, admin_modification_reason: e.target.value })} 
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #d1d5db', minHeight: '80px' }} 
+                                        placeholder="Ej: Se le olvidó fichar a la salida..."
+                                        required 
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                                <button type="button" onClick={() => setEditTimeEntry(null)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                                <button type="submit" disabled={loading} className="btn btn-primary" style={{ flex: 1 }}>{loading ? 'Guardando...' : 'Guardar Corrección'}</button>
                             </div>
                         </form>
                     </div>
