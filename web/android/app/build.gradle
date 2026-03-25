@@ -16,6 +16,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            storeFile file("app-fichar.jks")
+            storePassword "Tanosoft_1967"
+            keyAlias "tanosoft"
+            keyPassword "Tanosoft_1967"
+        }
+    }
+    
+    
+    
+    
+    
+    
     buildTypes {
         release {
             minifyEnabled false

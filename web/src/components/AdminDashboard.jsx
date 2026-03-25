@@ -216,16 +216,27 @@ export function AdminDashboard({ profile }) {
         }
 
         try {
-            setLoading(true)
-            
             const startD = new Date(timeEntryFormData.start_at)
             const startUtc = new Date(startD.getTime()).toISOString()
             
             let endUtc = null
             if (timeEntryFormData.end_at) {
                 const endD = new Date(timeEntryFormData.end_at)
+                
+                const diffHours = (endD.getTime() - startD.getTime()) / (1000 * 60 * 60)
+                if (diffHours < 0) {
+                    alert('❌ Error: La hora de salida no puede ser anterior a la hora de entrada.')
+                    return
+                }
+                if (diffHours >= 20) {
+                    const confirmLong = window.confirm(`⏳ ¡Atención! La diferencia entre la entrada y la salida es de ${Math.floor(diffHours)} horas.\n\nEs muy probable que el calendario haya puesto el día de HOY por defecto al rellenar la salida, en vez de la fecha real del fichaje.\n\n¿Estás seguro de que quieres guardar un turno tan largo?`)
+                    if (!confirmLong) return
+                }
+
                 endUtc = new Date(endD.getTime()).toISOString()
             }
+            
+            setLoading(true)
 
             const { error: updateErr } = await supabase
                 .from('time_entries')
@@ -1040,7 +1051,18 @@ export function AdminDashboard({ profile }) {
                                                 <tr key={entry.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                                     <td style={{ padding: '0.75rem' }}>{format(new Date(entry.work_date), 'dd/MM/yyyy')}</td>
                                                     <td style={{ padding: '0.75rem' }}>{format(new Date(entry.start_at), 'HH:mm')}</td>
-                                                    <td style={{ padding: '0.75rem' }}>{entry.end_at ? format(new Date(entry.end_at), 'HH:mm') : '-'}</td>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        {entry.end_at ? (
+                                                            <>
+                                                                <span>{format(new Date(entry.end_at), 'HH:mm')}</span>
+                                                                {new Date(entry.end_at).getDate() !== new Date(entry.start_at).getDate() && (
+                                                                    <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '2px' }} title="La salida se registró en un día diferente al de la entrada">
+                                                                        {format(new Date(entry.end_at), 'dd/MM/yyyy')}
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : '-'}
+                                                    </td>
                                                     <td style={{ padding: '0.75rem' }}>
                                                         {entry.break_entries?.reduce((acc, brk) => brk.end_at ? acc + Math.floor((new Date(brk.end_at) - new Date(brk.start_at)) / 60000) : acc, 0) || 0}m
                                                     </td>
