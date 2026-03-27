@@ -460,7 +460,7 @@ export function CompanySettings({ profile, onComplete }) {
                 </div>
                 <p className="text-muted" style={{ marginTop: '0.5rem' }}>Añade los días que serán marcados como fiesta en el calendario laboral.</p>
 
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
                     <input
                         type="date"
                         value={newHolidayDate}
@@ -521,7 +521,7 @@ export function CompanySettings({ profile, onComplete }) {
             <div style={{ marginTop: '1.5rem' }}>
                 <h4>Colores Corporativos</h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                             Color Primario
