@@ -42,12 +42,19 @@ export function SignatureModal({ isOpen, onClose, document, userId, onSigned }) 
             const lastPage = pages[pages.length - 1]
             const { width, height } = lastPage.getSize()
 
-            // Draw signature image on the bottom right
+            // Draw signature image based on defined placement
             const sigWidth = 150
             const sigHeight = (signatureImage.height / signatureImage.width) * sigWidth
 
+            let xPos = width - sigWidth - 50 // default right
+            if (document.signature_placement === 'left') {
+                xPos = 50
+            } else if (document.signature_placement === 'center') {
+                xPos = (width - sigWidth) / 2
+            }
+
             lastPage.drawImage(signatureImage, {
-                x: width - sigWidth - 50,
+                x: xPos,
                 y: 50,
                 width: sigWidth,
                 height: sigHeight,
@@ -55,7 +62,7 @@ export function SignatureModal({ isOpen, onClose, document, userId, onSigned }) 
 
             // Add text metadata (who and when)
             lastPage.drawText(`Firmado por: ${userId}\nFecha: ${new Date().toLocaleString()}`, {
-                x: width - sigWidth - 50,
+                x: xPos,
                 y: 35,
                 size: 8,
                 color: rgb(0.1, 0.1, 0.1),

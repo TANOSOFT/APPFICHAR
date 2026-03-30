@@ -153,6 +153,30 @@ export function TimeTracker({ profile: initialProfile, session, onEntryChange })
                 message: 'Tu jornada del ' + startDate.toLocaleDateString() + ' se cerró automáticamente tras 24h abierta para evitar errores.'
             });
 
+            // Call Edge Function for professional email
+            const { data: empData } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', profile.id)
+                .single();
+
+            if (empData?.email) {
+                await supabase.functions.invoke('send-monetization-email', {
+                    body: {
+                        to: empData.email,
+                        subject: 'Aviso: Jornada cerrada automáticamente',
+                        html: `
+                            <p>Hola,</p>
+                            <p>Te informamos que tu jornada iniciada el <strong>${startDate.toLocaleDateString()}</strong> a las <strong>${startDate.toLocaleTimeString()}</strong> ha estado abierta durante más de 24 horas.</p>
+                            <p>Para evitar errores de cálculo en tu registro horario, el sistema la ha <strong>cerrado automáticamente</strong>.</p>
+                            <p>Si se trata de un error, por favor contacta con el administrador de tu empresa para que ajuste la hora de salida de ese día.</p>
+                        `,
+                        type: 'custom',
+                        tenant_id: profile.tenant_id
+                    }
+                });
+            }
+
             console.log('✅ Stale entry auto-closed');
             if (onEntryChange) onEntryChange();
         } catch (err) {

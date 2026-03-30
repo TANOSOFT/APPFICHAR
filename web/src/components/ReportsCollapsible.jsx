@@ -95,6 +95,8 @@ export function ReportsCollapsible({ userId, profile }) {
                                 {documents.map(doc => (
                                     <li key={doc.id} style={{
                                         display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '0.5rem',
                                         justifyContent: 'space-between',
                                         alignItems: 'center',
                                         padding: '0.75rem',
@@ -108,7 +110,7 @@ export function ReportsCollapsible({ userId, profile }) {
                                             </span>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {doc.file_type === 'application/pdf' && !doc.is_signed && (
+                                            {doc.file_type === 'application/pdf' && !doc.is_signed && doc.requires_signature && (
                                                 <button
                                                     onClick={() => setSigningDoc(doc)}
                                                     className="btn"

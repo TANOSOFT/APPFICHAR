@@ -7,6 +7,8 @@ export function DocumentManager({ employee, adminProfile }) {
     const [description, setDescription] = useState('')
     const [uploading, setUploading] = useState(false)
     const [loading, setLoading] = useState(true)
+    const [requiresSignature, setRequiresSignature] = useState(false)
+    const [signaturePlacement, setSignaturePlacement] = useState('right')
     const uploadBtnRef = useRef(null)
 
     useEffect(() => {
@@ -100,14 +102,50 @@ export function DocumentManager({ employee, adminProfile }) {
                     description: description.trim() || selectedFile.name,
                     file_path: filePath,
                     file_type: selectedFile.type,
-                    uploaded_by: adminProfile.id
+                    uploaded_by: adminProfile.id,
+                    requires_signature: requiresSignature,
+                    signature_placement: signaturePlacement
                 }])
 
             if (dbError) throw dbError
 
-            alert('✅ Documento subido correctamente')
+            // 3. Handle Notifications if Signature is Required
+            if (requiresSignature) {
+                const { data: empData } = await supabase
+                    .from('profiles')
+                    .select('email')
+                    .eq('id', employee.id)
+                    .single();
+
+                await supabase.from('notifications').insert({
+                    user_id: employee.id,
+                    type: 'document_to_sign',
+                    message: `Tienes un nuevo documento pendiente de firma: ${description.trim() || selectedFile.name}`,
+                    read: false
+                });
+
+                if (empData?.email) {
+                    await supabase.functions.invoke('send-monetization-email', {
+                        body: {
+                            to: empData.email,
+                            subject: 'Nuevo documento para firmar en AppFichar',
+                            html: `
+                                <p>Hola,</p>
+                                <p>Tienes un nuevo documento (<strong>${description.trim() || selectedFile.name}</strong>) pendiente de firma electrónica en tu portal de AppFichar.</p>
+                                <p>Por favor, inicia sesión para revisarlo y firmarlo.</p>
+                            `,
+                            type: 'custom',
+                            tenant_id: adminProfile.tenant_id
+                        }
+                    });
+                }
+            }
+
+            alert('✅ Documento subido correctamente' + (requiresSignature ? ' y notificado al empleado.' : ''))
             setDescription('')
             setSelectedFile(null)
+            setRequiresSignature(false)
+            setSignaturePlacement('right')
             fetchDocuments()
         } catch (err) {
             console.error('Error uploading document:', err)
@@ -245,6 +283,43 @@ export function DocumentManager({ employee, adminProfile }) {
                             border: '1px solid #10b981'
                         }}>
                            📎 {selectedFile.name}
+                        </div>
+                    )}
+                </div>
+
+                {/* Opciones de Firma */}
+                <div style={{ width: '100%', backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', fontSize: '0.875rem', color: '#4b5563', cursor: 'pointer' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={requiresSignature}
+                            onChange={(e) => setRequiresSignature(e.target.checked)}
+                            style={{ width: '1.2rem', height: '1.2rem', accentColor: '#4f46e5' }}
+                        />
+                        3. Exigir que el empleado firme este documento digitalmente
+                    </label>
+                    
+                    {requiresSignature && (
+                        <div style={{ marginTop: '1rem', paddingLeft: '1.7rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.875rem', color: '#4b5563' }}>
+                                ¿Dónde se colocará la firma en el PDF?
+                            </label>
+                            <select
+                                value={signaturePlacement}
+                                onChange={(e) => setSignaturePlacement(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.5rem',
+                                    borderRadius: '6px',
+                                    border: '1px solid #d1d5db',
+                                    fontSize: '14px',
+                                    backgroundColor: 'white'
+                                }}
+                            >
+                                <option value="right">Pie de página - Derecha</option>
+                                <option value="center">Pie de página - Centro</option>
+                                <option value="left">Pie de página - Izquierda</option>
+                            </select>
                         </div>
                     )}
                 </div>
