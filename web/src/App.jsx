@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Toaster } from 'react-hot-toast'
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase, getRedirectUrl } from './lib/supabase'
 import { NotificationBell } from './components/NotificationBell'
@@ -168,12 +169,12 @@ function AppInner() {
 
                 // 1. Request BOTH Push and Local permissions
                 let pushPerm = await PushNotifications.checkPermissions()
-                if (pushPerm.receive === 'prompt') {
+                if (pushPerm.receive !== 'granted') {
                     pushPerm = await PushNotifications.requestPermissions()
                 }
 
                 let localPerm = await LocalNotifications.checkPermissions()
-                if (localPerm.display === 'prompt') {
+                if (localPerm.display !== 'granted') {
                     localPerm = await LocalNotifications.requestPermissions()
                 }
 
@@ -772,6 +773,7 @@ function Dashboard({ session }) {
 
     return (
         <div className="container" style={{ padding: '50px 0 100px 0' }}>
+            <Toaster position="top-center" />
             <NotificationBell userId={session.user.id} />
 
             <div style={{

@@ -135,6 +135,37 @@ export function CorrectionRequest({ profile }) {
 
             if (error) throw error
 
+            // Send Email Notification to Admins
+            const { data: admins } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('tenant_id', profile.tenant_id)
+                .in('role', ['admin', 'super_admin'])
+            
+            if (admins && admins.length > 0) {
+                const typeName = requestType === 'modify' ? 'Modificar fichaje' : requestType === 'add_missing' ? 'Añadir fichaje olvidado' : 'Eliminar fichaje erróneo';
+                const dateStr = requestedDate ? format(new Date(requestedDate), 'dd/MM/yyyy') : (selectedEntry ? format(new Date(selectedEntry.work_date), 'dd/MM/yyyy') : '');
+                const htmlBody = `
+                    <p>Hola Administrador,</p>
+                    <p>El empleado <strong>${profile.full_name || user.email}</strong> ha solicitado una corrección de fichaje (<strong>${typeName}</strong>) para la fecha <strong>${dateStr}</strong>.</p>
+                    <p>Motivo: ${reason.trim()}</p>
+                    <p>Por favor, accede a Fichar App en la pestaña "Ver Notificaciones / Correcciones" para revisar la solicitud y aprobarla o rechazarla.</p>
+                `;
+
+                for (const admin of admins) {
+                    if (!admin.email) continue;
+                    await supabase.functions.invoke('send-monetization-email', {
+                        body: {
+                            to: admin.email,
+                            subject: 'Nueva Corrección de Fichaje: ' + (profile.full_name || 'Empleado'),
+                            html: htmlBody,
+                            type: 'custom',
+                            tenant_id: profile.tenant_id
+                        }
+                    }).catch(err => console.error('Email invoking failed:', err))
+                }
+            }
+
             alert('✅ Solicitud de corrección enviada correctamente')
 
             // Reset form

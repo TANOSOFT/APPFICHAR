@@ -131,6 +131,40 @@ export function CorrectionReview({ profile }) {
                 await applyCorrection(request)
             }
 
+            // Send Email Notification to Employee
+            const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('email, full_name')
+                .eq('id', request.user_id)
+                .single()
+
+            if (userProfile?.email) {
+                const typeName = request.request_type === 'modify' ? 'Modificar fichaje' : request.request_type === 'add_missing' ? 'Añadir fichaje olvidado' : 'Eliminar fichaje erróneo';
+                const statusStr = newStatus === 'approved' ? 'APROBADA' : 'RECHAZADA';
+                const dateStr = request.requested_date ? format(new Date(request.requested_date), 'dd/MM/yyyy') : '-';
+                const htmlBody = `
+                    <p>Hola ${userProfile.full_name || 'Empleado'},</p>
+                    <p>Tu solicitud de corrección de fichaje (<strong>${typeName}</strong> para la fecha <strong>${dateStr}</strong>) ha sido <strong>${statusStr}</strong> por la administración.</p>
+                    ${notes ? `<p><strong>Comentarios del Administrador:</strong> ${notes}</p>` : ''}
+                    <p>Puedes revisar tus fichajes actualizados en Fichar App.</p>
+                `;
+                
+                await supabase.functions.invoke('send-monetization-email', {
+                    body: {
+                        to: userProfile.email,
+                        subject: `Resolución de Corrección de Fichaje: ${statusStr}`,
+                        html: htmlBody,
+                        type: 'custom',
+                        tenant_id: profile.tenant_id
+                    }
+                }).catch(e => {
+                    console.error('Email error:', e)
+                    alert('Aviso: Fallo al enviar el email al empleado (' + e.message + ')')
+                })
+            } else {
+                alert('Aviso: El empleado no tiene un correo registrado en su perfil. No se le notificará por email.')
+            }
+
             alert(`✅ Solicitud ${newStatus === 'approved' ? 'aprobada' : 'rechazada'} correctamente`)
             fetchRequests()
 

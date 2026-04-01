@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { App as CapApp } from '@capacitor/app'
+import { toast } from 'react-hot-toast'
 
 export function useNotifications(userId) {
     const [notifications, setNotifications] = useState([])
@@ -10,9 +11,6 @@ export function useNotifications(userId) {
 
     const showLocalNotification = async (payload) => {
         try {
-            const { platform } = await CapApp.getInfo()
-            if (platform === 'web') return
-
             const { new: newNotification } = payload
             if (!newNotification || newNotification.read) return
 
@@ -32,6 +30,18 @@ export function useNotifications(userId) {
                 'billing_notice': '📧 AVISO DE PAGO PENDIENTE',
                 'license_suspended': '🚫 LICENCIA SUSPENDIDA'
             }
+
+            const title = typeLabels[newNotification.type] || 'Nueva Notificación'
+            const body = newNotification.message || 'Tienes un nuevo mensaje en Fichar App'
+
+            // Always show toast (useful for web, also okay to overlay on mobile if they have app open)
+            toast(body, { 
+                icon: '🔔',
+                duration: 5000 
+            })
+
+            const { platform } = await CapApp.getInfo()
+            if (platform === 'web') return
 
             await LocalNotifications.schedule({
                 notifications: [

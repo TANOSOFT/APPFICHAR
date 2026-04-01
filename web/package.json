@@ -1,5 +1,5 @@
 {
-  "name": "time-tracking-saas-web",
+  "name": "fichar-app",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -26,6 +26,7 @@
     "pdf-lib": "^1.17.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.22.1",
     "react-signature-canvas": "^1.1.0-alpha.2",
     "recharts": "^3.7.0",

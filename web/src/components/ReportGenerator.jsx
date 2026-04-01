@@ -30,8 +30,11 @@ const handleFileDownload = async (blob, fileName, mimeType) => {
             const savedFile = await Filesystem.writeFile({
                 path: fileName,
                 data: base64Data,
-                directory: Directory.Cache
+                directory: Directory.Documents
             });
+
+            // Alert user that the file was downloaded
+            alert('✅ Archivo guardado correctamente en la carpeta Documentos de tu móvil.\n\nNombre: ' + fileName);
 
             // Share the file
             await Share.share({

@@ -184,6 +184,41 @@ export function AbsenceReview({ profile }) {
 
             if (error) throw error
 
+            // Send Email to Employee
+            const req = requests.find(r => r.id === requestId)
+            if (req) {
+                const { data: userProfile } = await supabase
+                    .from('profiles')
+                    .select('email, full_name')
+                    .eq('id', req.user_id)
+                    .single()
+                
+                if (userProfile?.email) {
+                    const typeName = getTypeTranslation(req.type);
+                    const statusStr = newStatus === 'approved' ? 'APROBADA' : 'RECHAZADA';
+                    const htmlBody = `
+                        <p>Hola ${userProfile.full_name || 'Empleado'},</p>
+                        <p>Tu solicitud de ausencia (<strong>${typeName}</strong>) del ${format(parseISO(req.start_date), 'dd/MM/yyyy')} al ${format(parseISO(req.end_date), 'dd/MM/yyyy')} ha sido <strong>${statusStr}</strong> por la administración.</p>
+                        ${adminComment ? `<p><strong>Comentarios del Administrador:</strong> ${adminComment}</p>` : ''}
+                        <p>Puedes acceder a Fichar App para ver todos los detalles en la pestaña de "Gestionar Vacaciones y Ausencias".</p>
+                    `;
+                    await supabase.functions.invoke('send-monetization-email', {
+                        body: {
+                            to: userProfile.email,
+                            subject: `Resolución de Solicitud de Ausencia: ${statusStr}`,
+                            html: htmlBody,
+                            type: 'custom',
+                            tenant_id: profile.tenant_id
+                        }
+                    }).catch(e => {
+                        console.error('Email error:', e)
+                        alert('Aviso: Fallo al enviar el email al empleado (' + e.message + ')')
+                    })
+                } else {
+                    alert('Aviso: El empleado no tiene un correo registrado en su perfil. No se le notificará por email.')
+                }
+            }
+
             alert(`✅ Solicitud ${newStatus === 'approved' ? 'aprobada' : 'rechazada'} correctamente`)
             fetchRequests()
         } catch (err) {
