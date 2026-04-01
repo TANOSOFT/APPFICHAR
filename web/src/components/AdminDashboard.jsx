@@ -6,6 +6,9 @@ import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { DocumentManager } from './DocumentManager'
+import { Filesystem, Directory } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
+import { Capacitor } from '@capacitor/core'
 
 // Helper function to convert hex color to RGB array
 function hexToRgb(hex) {
@@ -41,6 +44,46 @@ const maskString = (str, visibleCount = 4) => {
     if (str.length <= visibleCount) return str
     return '*'.repeat(str.length - visibleCount) + str.slice(-visibleCount)
 }
+
+const handleFileDownload = async (blob, fileName, mimeType) => {
+    if (Capacitor.isNativePlatform()) {
+        try {
+            const reader = new FileReader();
+            const base64Promise = new Promise((resolve) => {
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            });
+            reader.readAsDataURL(blob);
+            const base64Data = await base64Promise;
+
+            const savedFile = await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: Directory.Documents
+            });
+
+            alert('✅ Archivo guardado correctamente en la carpeta Documentos de tu móvil.\n\nNombre: ' + fileName);
+
+            await Share.share({
+                title: 'Descargar Reporte',
+                text: `Aquí tienes tu reporte: ${fileName}`,
+                url: savedFile.uri,
+                dialogTitle: 'Abrir reporte con...'
+            });
+        } catch (err) {
+            console.error('Error sharing file on mobile:', err);
+            alert('Error al compartir el archivo: ' + err.message);
+        }
+    } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+};
 
 export function AdminDashboard({ profile }) {
     const [employees, setEmployees] = useState([])
@@ -395,7 +438,9 @@ export function AdminDashboard({ profile }) {
                     contracted_hours_daily: parseFloat(editFormData.contracted_hours_daily),
                     contracted_hours_weekly: parseFloat(editFormData.contracted_hours_weekly),
                     contract_start_date: editFormData.contract_start_date,
-                    contract_end_date: editFormData.contract_type === 'indefinido' ? null : editFormData.contract_end_date
+                    contract_end_date: editFormData.contract_type === 'indefinido' ? null : editFormData.contract_end_date,
+                    scheduled_start_time: editFormData.scheduled_start_time || null,
+                    scheduled_end_time: editFormData.scheduled_end_time || null
                 })
                 .eq('id', editFormData.id)
 
@@ -608,9 +653,8 @@ export function AdminDashboard({ profile }) {
 
             // Save PDF
             const fileName = `Registro_${selectedEmployee.full_name || 'empleado'}_${format(monthStart, 'yyyy-MM')}.pdf`
-            doc.save(fileName)
-
-            alert('✅ PDF generado correctamente')
+            const pdfBlob = doc.output('blob')
+            await handleFileDownload(pdfBlob, fileName, 'application/pdf')
 
         } catch (err) {
             console.error('Error generating PDF:', err)
@@ -683,9 +727,10 @@ export function AdminDashboard({ profile }) {
             XLSX.utils.book_append_sheet(wb, ws, 'Fichajes')
 
             // Generate and download
-            XLSX.writeFile(wb, `Fichajes_${selectedEmployee.full_name || 'empleado'}_${format(monthStart, 'yyyy-MM')}.xlsx`)
-
-            alert('✅ Excel descargado correctamente')
+            const fileName = `Fichajes_${selectedEmployee.full_name || 'empleado'}_${format(monthStart, 'yyyy-MM')}.xlsx`
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            await handleFileDownload(blob, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
         } catch (err) {
             console.error('Error generating Excel:', err)
@@ -714,7 +759,9 @@ export function AdminDashboard({ profile }) {
                     contracted_hours_daily,
                     contracted_hours_weekly,
                     contract_start_date,
-                    contract_end_date
+                    contract_end_date,
+                    scheduled_start_time,
+                    scheduled_end_time
                 `)
                 .eq('tenant_id', profile.tenant_id)
 
@@ -736,6 +783,8 @@ export function AdminDashboard({ profile }) {
                 'Horas/Semana': emp.contracted_hours_weekly || 0,
                 'Inicio Contrato': emp.contract_start_date || 'N/A',
                 'Fin Contrato': emp.contract_end_date || (emp.contract_type === 'indefinido' ? 'Indefinido' : 'N/A'),
+                'Horario Entrada': emp.scheduled_start_time ? emp.scheduled_start_time.slice(0, 5) : 'No definido',
+                'Horario Salida': emp.scheduled_end_time ? emp.scheduled_end_time.slice(0, 5) : 'No definido',
                 'Estado': emp.active ? 'Activo' : 'Inactivo',
                 'Rol': emp.role === 'admin' ? 'Administrador' : emp.role === 'super_admin' ? 'Superadministrador' : 'Empleado'
             }))
@@ -754,14 +803,40 @@ export function AdminDashboard({ profile }) {
                 { wch: 12 }, // Horas/Sem
                 { wch: 15 }, // Inicio
                 { wch: 15 }, // Fin
+                { wch: 12 }, // Horario In
+                { wch: 12 }, // Horario Out
                 { wch: 10 }, // Estado
                 { wch: 12 }  // Rol
             ]
 
             XLSX.utils.book_append_sheet(wb, ws, 'Plantilla_Laboral')
-            XLSX.writeFile(wb, `Informe_Laboral_Completo_${format(new Date(), 'yyyy-MM-dd')}.xlsx`)
+            const fileName = `Informe_Laboral_Completo_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+            
+            if (Capacitor.isNativePlatform()) {
+                const base64Data = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 
-            alert('✅ Informe laboral completo exportado correctamente')
+                const savedFile = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Directory.Documents
+                });
+
+                alert('✅ Archivo guardado correctamente en la carpeta Documentos de tu móvil.\n\nNombre: ' + fileName);
+
+                try {
+                    await Share.share({
+                        title: 'Descargar Reporte',
+                        text: `Aquí tienes tu reporte: ${fileName}`,
+                        url: savedFile.uri,
+                        dialogTitle: 'Abrir reporte con...'
+                    });
+                } catch(e) {
+                    console.error('Error sharing file on mobile:', e);
+                }
+            } else {
+                XLSX.writeFile(wb, fileName)
+                alert('✅ Informe laboral completo exportado correctamente')
+            }
 
         } catch (err) {
             console.error('Error generating bulk report:', err)
@@ -907,6 +982,20 @@ export function AdminDashboard({ profile }) {
                                     <p style={{ margin: 0, fontWeight: '500' }}>
                                         {selectedEmployee.contract_end_date || (selectedEmployee.contract_type === 'indefinido' ? 'Indefinido' : 'No definida')}
                                     </p>
+                                </div>
+                                <div style={{ borderTop: '1px solid #e5e7eb', gridColumn: 'span 2', marginTop: '0.5rem', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>Horario Entrada</p>
+                                        <p style={{ margin: 0, fontWeight: '500' }}>
+                                            {selectedEmployee.scheduled_start_time ? selectedEmployee.scheduled_start_time.slice(0, 5) : 'No definido'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>Horario Salida</p>
+                                        <p style={{ margin: 0, fontWeight: '500' }}>
+                                            {selectedEmployee.scheduled_end_time ? selectedEmployee.scheduled_end_time.slice(0, 5) : 'No definido'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1135,6 +1224,14 @@ export function AdminDashboard({ profile }) {
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Horas Diarias</label>
                                     <input type="number" step="0.5" value={editFormData.contracted_hours_daily || ''} onChange={e => setEditFormData({ ...editFormData, contracted_hours_daily: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Horario Entrada</label>
+                                    <input type="time" value={editFormData.scheduled_start_time || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_start_time: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Horario Salida</label>
+                                    <input type="time" value={editFormData.scheduled_end_time || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_end_time: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>

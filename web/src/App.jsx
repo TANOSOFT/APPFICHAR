@@ -17,7 +17,7 @@ import { StatisticsCollapsible } from './components/StatisticsCollapsible'
 import { ReportsCollapsible } from './components/ReportsCollapsible'
 import { SuperAdminMenu } from './components/SuperAdminMenu'
 import { UserProfile } from './components/UserProfile'
-
+import { useScheduleReminder } from './hooks/useScheduleReminder'
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
@@ -160,7 +160,21 @@ function AppInner() {
             if (existingSession) setSession(existingSession)
         })
 
-        // 5. Mobile Notifications Setup
+        // Hide splash screen after initialization
+        setTimeout(() => {
+            SplashScreen.hide().catch(() => { })
+        }, 500)
+
+        return () => {
+            subscription.unsubscribe()
+            urlListener.remove()
+        }
+    }, [])
+
+    // 5. Mobile Notifications Setup
+    useEffect(() => {
+        if (!session) return;
+
         const setupNotifications = async () => {
             try {
                 // Only for native platforms
@@ -231,20 +245,9 @@ function AppInner() {
                 console.error('Error setting up notifications:', err)
             }
         }
-        if (session) {
-            setupNotifications()
-        }
 
-        // Hide splash screen after initialization
-        setTimeout(() => {
-            SplashScreen.hide().catch(() => { })
-        }, 500)
-
-        return () => {
-            subscription.unsubscribe()
-            urlListener.remove()
-        }
-    }, [])
+        setupNotifications()
+    }, [session])
 
     const content = (isRecovering || !session) 
         ? <Auth forceRecovery={isRecovering} onPasswordUpdated={() => setIsRecovering(false)} /> 
@@ -558,6 +561,8 @@ function Dashboard({ session }) {
     const [tenant, setTenant] = useState(null)
     const [branding, setBranding] = useState(null)
     const [viewMode, setViewMode] = useState('employee') // 'admin' | 'employee'
+
+    useScheduleReminder(profile);
 
     useEffect(() => {
         if (profile?.role === 'admin' || profile?.role === 'super_admin') {
