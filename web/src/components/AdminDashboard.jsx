@@ -982,6 +982,7 @@ export function AdminDashboard({ profile }) {
                                 </div>
                                 <div>
                                     <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>Fin Contrato</p>
+                                    <p style={{ margin: 0, fontWeight: '500' }}>
                                         {selectedEmployee.contract_end_date || (selectedEmployee.contract_type === 'indefinido' ? 'Indefinido' : 'No definida')}
                                     </p>
                                 </div>
@@ -1021,6 +1022,7 @@ export function AdminDashboard({ profile }) {
                                 </div>
                             </div>
                         </div>
+                    </div>
 
                         {/* Document Management Section */}
                         <div style={{
@@ -1276,7 +1278,8 @@ export function AdminDashboard({ profile }) {
                                                 <input type="time" value={editFormData.scheduled_end_time_2 || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_end_time_2: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
                                             </div>
                                         </div>
-                                </div>
+                                    </div>
+                                )}
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                                 <button type="button" onClick={() => setEditMode(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
