@@ -440,7 +440,10 @@ export function AdminDashboard({ profile }) {
                     contract_start_date: editFormData.contract_start_date,
                     contract_end_date: editFormData.contract_type === 'indefinido' ? null : editFormData.contract_end_date,
                     scheduled_start_time: editFormData.scheduled_start_time || null,
-                    scheduled_end_time: editFormData.scheduled_end_time || null
+                    scheduled_end_time: editFormData.scheduled_end_time || null,
+                    schedule_type: editFormData.schedule_type || 'continua',
+                    scheduled_start_time_2: editFormData.schedule_type === 'partida' ? (editFormData.scheduled_start_time_2 || null) : null,
+                    scheduled_end_time_2: editFormData.schedule_type === 'partida' ? (editFormData.scheduled_end_time_2 || null) : null
                 })
                 .eq('id', editFormData.id)
 
@@ -979,23 +982,42 @@ export function AdminDashboard({ profile }) {
                                 </div>
                                 <div>
                                     <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>Fin Contrato</p>
-                                    <p style={{ margin: 0, fontWeight: '500' }}>
                                         {selectedEmployee.contract_end_date || (selectedEmployee.contract_type === 'indefinido' ? 'Indefinido' : 'No definida')}
                                     </p>
                                 </div>
-                                <div style={{ borderTop: '1px solid #e5e7eb', gridColumn: 'span 2', marginTop: '0.5rem', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div>
-                                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>Horario Entrada</p>
-                                        <p style={{ margin: 0, fontWeight: '500' }}>
-                                            {selectedEmployee.scheduled_start_time ? selectedEmployee.scheduled_start_time.slice(0, 5) : 'No definido'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>Horario Salida</p>
-                                        <p style={{ margin: 0, fontWeight: '500' }}>
-                                            {selectedEmployee.scheduled_end_time ? selectedEmployee.scheduled_end_time.slice(0, 5) : 'No definido'}
-                                        </p>
-                                    </div>
+                                <div style={{ borderTop: '1px solid #e5e7eb', gridColumn: 'span 2', marginTop: '0.5rem', paddingTop: '1rem' }}>
+                                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                                        Tipo de Jornada: <span style={{ color: '#374151', fontWeight: 'bold', textTransform: 'capitalize' }}>{selectedEmployee.schedule_type || 'continua'}</span>
+                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div>
+                                            <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280' }}>{selectedEmployee.schedule_type === 'partida' ? 'Mañana: Entrada' : 'Horario Entrada'}</p>
+                                            <p style={{ margin: 0, fontWeight: '500' }}>
+                                                {selectedEmployee.scheduled_start_time ? selectedEmployee.scheduled_start_time.slice(0, 5) : 'No definido'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280' }}>{selectedEmployee.schedule_type === 'partida' ? 'Mañana: Salida' : 'Horario Salida'}</p>
+                                            <p style={{ margin: 0, fontWeight: '500' }}>
+                                                {selectedEmployee.scheduled_end_time ? selectedEmployee.scheduled_end_time.slice(0, 5) : 'No definido'}
+                                            </p>
+                                        </div>
+                                        {selectedEmployee.schedule_type === 'partida' && (
+                                            <>
+                                                <div>
+                                                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280' }}>Tarde: Entrada</p>
+                                                    <p style={{ margin: 0, fontWeight: '500' }}>
+                                                        {selectedEmployee.scheduled_start_time_2 ? selectedEmployee.scheduled_start_time_2.slice(0, 5) : '-' }
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280' }}>Tarde: Salida</p>
+                                                    <p style={{ margin: 0, fontWeight: '500' }}>
+                                                        {selectedEmployee.scheduled_end_time_2 ? selectedEmployee.scheduled_end_time_2.slice(0, 5) : '-' }
+                                                    </p>
+                                                </div>
+                                            </>
+                                        )}
                                 </div>
                             </div>
                         </div>
@@ -1214,24 +1236,46 @@ export function AdminDashboard({ profile }) {
                                     <input type="text" value={editFormData.dni || ''} onChange={e => setEditFormData({ ...editFormData, dni: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Contrato</label>
-                                    <select value={editFormData.contract_type || ''} onChange={e => setEditFormData({ ...editFormData, contract_type: e.target.value })} style={{ width: '100%', padding: '0.5rem' }}>
-                                        <option value="indefinido">Indefinido</option>
-                                        <option value="temporal">Temporal</option>
-                                        <option value="practicas">Prácticas</option>
+                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Tipo de Jornada</label>
+                                    <select value={editFormData.schedule_type || 'continua'} onChange={e => setEditFormData({ ...editFormData, schedule_type: e.target.value })} style={{ width: '100%', padding: '0.5rem' }}>
+                                        <option value="continua">Continua</option>
+                                        <option value="partida">Partida</option>
+                                        <option value="flexible">Flexible</option>
+                                        <option value="otros">Otros</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Horas Diarias</label>
                                     <input type="number" step="0.5" value={editFormData.contracted_hours_daily || ''} onChange={e => setEditFormData({ ...editFormData, contracted_hours_daily: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
                                 </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Horario Entrada</label>
-                                    <input type="time" value={editFormData.scheduled_start_time || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_start_time: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                <div style={{ borderTop: '1px solid #eee', gridColumn: 'span 2', marginTop: '0.5rem', paddingTop: '0.5rem' }}>
+                                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 'bold', color: '#4b5563' }}>
+                                        {editFormData.schedule_type === 'partida' ? 'Primer Bloque (Mañana):' : 'Horario Principal:'}
+                                    </p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Entrada</label>
+                                            <input type="time" value={editFormData.scheduled_start_time || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_start_time: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Salida</label>
+                                            <input type="time" value={editFormData.scheduled_end_time || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_end_time: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Horario Salida</label>
-                                    <input type="time" value={editFormData.scheduled_end_time || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_end_time: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                {editFormData.schedule_type === 'partida' && (
+                                    <div style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
+                                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', fontWeight: 'bold', color: '#4b5563' }}>Segundo Bloque (Tarde):</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Entrada</label>
+                                                <input type="time" value={editFormData.scheduled_start_time_2 || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_start_time_2: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280' }}>Salida</label>
+                                                <input type="time" value={editFormData.scheduled_end_time_2 || ''} onChange={e => setEditFormData({ ...editFormData, scheduled_end_time_2: e.target.value })} style={{ width: '100%', padding: '0.5rem' }} />
+                                            </div>
+                                        </div>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>

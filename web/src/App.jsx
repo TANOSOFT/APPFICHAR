@@ -4,6 +4,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase, getRedirectUrl } from './lib/supabase'
 import { NotificationBell } from './components/NotificationBell'
 import { PushNotifications } from '@capacitor/push-notifications'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { App as CapApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { TimeTracker } from './components/TimeTracker'
@@ -55,7 +56,7 @@ function AppInner() {
 
     // Diagnostic log for version verification
     useEffect(() => {
-        console.log('Fichar App v1.1.0 Loaded - Current Build: OvN-ZbjJ')
+        console.log('Fichar App v1.8.0 Loaded')
     }, [])
 
     useEffect(() => {
@@ -177,8 +178,7 @@ function AppInner() {
 
         const setupNotifications = async () => {
             try {
-                // Only for native platforms
-                const { platform } = await CapApp.getInfo()
+                const platform = Capacitor.getPlatform();
                 if (platform === 'web') return
 
                 // 1. Request BOTH Push and Local permissions
@@ -196,7 +196,32 @@ function AppInner() {
                     console.warn('Push notification permissions not granted')
                 }
 
-                // 2. Create Notification Channel (Android Requirement for reliable banners)
+                // 2. Prepare Listeners BEFORE Registering
+                PushNotifications.addListener('registration', async ({ value }) => {
+                    console.log('Push registration success, token:', value)
+                    
+                    if (session?.user) {
+                        const { error } = await supabase.from('device_tokens').upsert({
+                            user_id: session.user.id,
+                            token: value,
+                            platform: platform,
+                            last_seen: new Date().toISOString()
+                        }, { onConflict: 'user_id, token' })
+
+                        if (error) {
+                            console.error('Error saving device token:', error)
+                        }
+                    }
+                })
+
+                PushNotifications.addListener('registrationError', (error) => {
+                    console.error('Push registration error:', error)
+                })
+
+                // 3. Register for Push
+                await PushNotifications.register()
+
+                // 4. Create Notification Channel (Android Requirement for reliable banners)
                 if (platform === 'android') {
                     await LocalNotifications.createChannel({
                         id: 'fichar-alerts',
@@ -209,32 +234,23 @@ function AppInner() {
                     })
                 }
 
-                // 3. Register for Push
-                await PushNotifications.register()
-
-                PushNotifications.addListener('registration', async ({ value }) => {
-                    console.log('Push registration success, token:', value)
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (user) {
-                        const { error } = await supabase.from('device_tokens').upsert({
-                            user_id: user.id,
-                            token: value,
-                            platform: platform,
-                            last_seen: new Date().toISOString()
-                        }, { onConflict: 'user_id, token' })
-
-                        if (error) console.error('Error saving device token:', error)
-                    }
-                })
-
-                PushNotifications.addListener('registrationError', (error) => {
-                    console.error('Push registration error:', error)
-                })
-
-                // 4. Remote Push Listeners (Handle pulses from FCM)
+                // 4. Remote Push Listeners (Foreground Handling)
                 PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                    console.log('Remote push received:', notification)
-                    // If app is in foreground, we might want to show a local alert
+                    console.log('Remote push received in foreground:', notification)
+                    
+                    // Force a local notification banner to show up in the system tray
+                    LocalNotifications.schedule({
+                        notifications: [
+                            {
+                                title: notification.title || 'Nueva Notificación',
+                                body: notification.body || 'Tienes un aviso pendiente en AppFichar',
+                                id: Math.floor(Math.random() * 1000000),
+                                channelId: 'fichar-alerts',
+                                schedule: { at: new Date(Date.now() + 1000) },
+                                actionTypeId: 'OPEN_APP'
+                            }
+                        ]
+                    }).catch(err => console.error('Error scheduling local notification:', err))
                 })
 
                 PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {

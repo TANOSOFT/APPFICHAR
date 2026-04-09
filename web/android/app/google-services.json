@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "588512676996",
+    "project_id": "app-fichar-cc58d",
+    "storage_bucket": "app-fichar-cc58d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588512676996:android:22d8942497f9fa39e506d1",
+        "android_client_info": {
+          "package_name": "com.appfichar.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKRzJ1b-C0vrWnaMz-zWmr5ymBXOu5o70"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
