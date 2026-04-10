@@ -362,20 +362,44 @@ function Auth({ forceRecovery, onPasswordUpdated }) {
             return
         }
         setLoading(true)
-        const { error } = await supabase.auth.signUp({
-            email: email.toLowerCase().trim(),
-            password,
-            options: {
-                emailRedirectTo: getRedirectUrl()
+        
+        try {
+            // Check for pending invitation first to avoid "ghost records"
+            const { data: invitation, error: inviteError } = await supabase
+                .from('pending_invitations')
+                .select('id')
+                .eq('email', email.toLowerCase().trim())
+                .eq('status', 'pending')
+                .maybeSingle()
+            
+            if (inviteError) throw inviteError
+            
+            if (!invitation) {
+                alert('Acceso restringido: No se ha encontrado una invitación para este correo electrónico. Contacta con el administrador de tu empresa.')
+                setLoading(false)
+                return
             }
-        })
-        if (error) {
-            alert('Error al registrarse: ' + error.message)
-        } else {
-            alert('✅ ¡Registro completado! Verifica tu email para confirmar la cuenta (si es necesario) e inicia sesión.')
-            setAuthView('login')
+
+            const { error } = await supabase.auth.signUp({
+                email: email.toLowerCase().trim(),
+                password,
+                options: {
+                    emailRedirectTo: getRedirectUrl()
+                }
+            })
+            
+            if (error) {
+                alert('Error al registrarse: ' + error.message)
+            } else {
+                alert('✅ ¡Registro completado! Verifica tu email para confirmar la cuenta e inicia sesión.')
+                setAuthView('login')
+            }
+        } catch (err) {
+            console.error('Auth check error:', err)
+            alert('Error al verificar la invitación: ' + err.message)
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
     const handleResetPassword = async (e) => {
