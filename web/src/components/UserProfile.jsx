@@ -139,6 +139,49 @@ export function UserProfile({ profile, userId, onUpdate }) {
                         />
                     </div>
 
+                    <div style={{
+                        marginTop: '1.5rem',
+                        padding: '1rem',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        marginBottom: '1.5rem'
+                    }}>
+                        <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            📅 Mi Horario Asignado
+                        </h4>
+                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#64748b' }}>
+                            Tipo: <span style={{ fontWeight: 'bold', color: '#1e293b', textTransform: 'capitalize' }}>{profile?.schedule_type || 'continua'}</span>
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                            <div>
+                                <p style={{ margin: '0', fontSize: '0.75rem', color: '#64748b' }}>{profile?.schedule_type === 'partida' ? 'Entrada (Mañana)' : 'Entrada'}</p>
+                                <p style={{ margin: '0', fontWeight: 'bold' }}>{profile?.scheduled_start_time ? profile.scheduled_start_time.slice(0, 5) : '09:00'}</p>
+                            </div>
+                            <div>
+                                <p style={{ margin: '0', fontSize: '0.75rem', color: '#64748b' }}>{profile?.schedule_type === 'partida' ? 'Salida (Mañana)' : 'Salida'}</p>
+                                <p style={{ margin: '0', fontWeight: 'bold' }}>{profile?.scheduled_end_time ? profile.scheduled_end_time.slice(0, 5) : '18:00'}</p>
+                            </div>
+                            {profile?.schedule_type === 'partida' && (
+                                <>
+                                    <div>
+                                        <p style={{ margin: '0', fontSize: '0.75rem', color: '#64748b' }}>Entrada (Tarde)</p>
+                                        <p style={{ margin: '0', fontWeight: 'bold' }}>{profile?.scheduled_start_time_2 ? profile.scheduled_start_time_2.slice(0, 5) : '-'}</p>
+                                    </div>
+                                    <div>
+                                        <p style={{ margin: '0', fontSize: '0.75rem', color: '#64748b' }}>Salida (Tarde)</p>
+                                        <p style={{ margin: '0', fontWeight: 'bold' }}>{profile?.scheduled_end_time_2 ? profile.scheduled_end_time_2.slice(0, 5) : '-'}</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        {(profile?.schedule_type === 'flexible' || profile?.schedule_type === 'otros') && (
+                            <p style={{ margin: '0.75rem 0 0 0', fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
+                                * Tu horario es flexible. Consulta con tu responsable para más detalles.
+                            </p>
+                        )}
+                    </div>
+
                     <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>
                         {loading ? 'Guardando...' : '💾 Guardar Cambios'}
                     </button>

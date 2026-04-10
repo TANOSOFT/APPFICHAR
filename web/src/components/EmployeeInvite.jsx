@@ -18,7 +18,12 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
         contractedHoursDaily: '8.00',
         contractedHoursWeekly: '40.00',
         contractStartDate: '',
-        contractEndDate: ''
+        contractEndDate: '',
+        scheduleType: 'continua',
+        scheduledStartTime: '09:00',
+        scheduledEndTime: '18:00',
+        scheduledStartTime2: '',
+        scheduledEndTime2: ''
     })
 
     useEffect(() => {
@@ -70,7 +75,12 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
                     contracted_hours_daily: parseFloat(formData.contractedHoursDaily),
                     contracted_hours_weekly: parseFloat(formData.contractedHoursWeekly),
                     contract_start_date: formData.contractStartDate || null,
-                    contract_end_date: formData.contractEndDate || null
+                    contract_end_date: formData.contractEndDate || null,
+                    schedule_type: formData.scheduleType,
+                    scheduled_start_time: formData.scheduledStartTime || '09:00',
+                    scheduled_end_time: formData.scheduledEndTime || '18:00',
+                    scheduled_start_time_2: formData.scheduleType === 'partida' ? (formData.scheduledStartTime2 || null) : null,
+                    scheduled_end_time_2: formData.scheduleType === 'partida' ? (formData.scheduledEndTime2 || null) : null
                 })
 
             if (inviteError) {
@@ -109,7 +119,12 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
                 contractedHoursDaily: '8.00',
                 contractedHoursWeekly: '40.00',
                 contractStartDate: '',
-                contractEndDate: ''
+                contractEndDate: '',
+                scheduleType: 'continua',
+                scheduledStartTime: '09:00',
+                scheduledEndTime: '18:00',
+                scheduledStartTime2: '',
+                scheduledEndTime2: ''
             })
 
             if (onInviteSuccess) onInviteSuccess()
@@ -173,7 +188,12 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
                     contracted_hours_daily: parseFloat(editingInvitation.contracted_hours_daily),
                     contracted_hours_weekly: parseFloat(editingInvitation.contracted_hours_weekly),
                     contract_start_date: editingInvitation.contract_start_date || null,
-                    contract_end_date: editingInvitation.contract_end_date || null
+                    contract_end_date: editingInvitation.contract_end_date || null,
+                    schedule_type: editingInvitation.schedule_type,
+                    scheduled_start_time: editingInvitation.scheduled_start_time || '09:00',
+                    scheduled_end_time: editingInvitation.scheduled_end_time || '18:00',
+                    scheduled_start_time_2: editingInvitation.schedule_type === 'partida' ? (editingInvitation.scheduled_start_time_2 || null) : null,
+                    scheduled_end_time_2: editingInvitation.schedule_type === 'partida' ? (editingInvitation.scheduled_end_time_2 || null) : null
                 })
                 .eq('id', editingInvitation.id)
 
@@ -435,6 +455,97 @@ export function EmployeeInvite({ profile, onInviteSuccess }) {
                         />
                     </div>
                 </div>
+                
+                {/* Schedule Type */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                        Tipo de Jornada
+                    </label>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        {['continua', 'partida', 'flexible', 'otros'].map(type => (
+                            <label key={type} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: formData.scheduleType === type ? '#ebf5ff' : '#f9fafb', padding: '0.5rem 0.75rem', borderRadius: '6px', border: `1px solid ${formData.scheduleType === type ? '#3b82f6' : '#e5e7eb'}`, transition: 'all 0.2s' }}>
+                                <input
+                                    type="radio"
+                                    name="scheduleType"
+                                    value={type}
+                                    checked={formData.scheduleType === type}
+                                    onChange={(e) => setFormData({ ...formData, scheduleType: e.target.value })}
+                                    style={{ marginRight: '0.5rem' }}
+                                />
+                                <span style={{ textTransform: 'capitalize', fontSize: '0.875rem', fontWeight: formData.scheduleType === type ? 'bold' : 'normal', color: formData.scheduleType === type ? '#1e40af' : '#4b5563' }}>{type}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Main Schedule block */}
+                <div style={{
+                    backgroundColor: '#f9fafb',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    marginBottom: '1rem'
+                }}>
+                    <p style={{ margin: '0 0 1rem 0', fontWeight: 'bold', fontSize: '0.875rem', color: '#374151' }}>
+                        {formData.scheduleType === 'partida' ? '🕒 Primer Bloque (Mañana):' : '🕒 Horario Principal:'}
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Entrada</label>
+                            <input
+                                type="time"
+                                value={formData.scheduledStartTime}
+                                onChange={(e) => setFormData({ ...formData, scheduledStartTime: e.target.value })}
+                                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #d1d5db', width: '100%' }}
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Salida</label>
+                            <input
+                                type="time"
+                                value={formData.scheduledEndTime}
+                                onChange={(e) => setFormData({ ...formData, scheduledEndTime: e.target.value })}
+                                style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #d1d5db', width: '100%' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Second block for split schedule */}
+                {formData.scheduleType === 'partida' && (
+                    <div style={{
+                        backgroundColor: '#f9fafb',
+                        padding: '1rem',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        marginBottom: '1.5rem',
+                        animation: 'fadeIn 0.3s ease-out'
+                    }}>
+                        <p style={{ margin: '0 0 1rem 0', fontWeight: 'bold', fontSize: '0.875rem', color: '#374151' }}>
+                            🕒 Segundo Bloque (Tarde):
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Entrada</label>
+                                <input
+                                    type="time"
+                                    value={formData.scheduledStartTime2}
+                                    onChange={(e) => setFormData({ ...formData, scheduledStartTime2: e.target.value })}
+                                    style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #d1d5db', width: '100%' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Salida</label>
+                                <input
+                                    type="time"
+                                    value={formData.scheduledEndTime2}
+                                    onChange={(e) => setFormData({ ...formData, scheduledEndTime2: e.target.value })}
+                                    style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid #d1d5db', width: '100%' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <button
                     type="submit"

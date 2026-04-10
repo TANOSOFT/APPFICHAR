@@ -788,6 +788,9 @@ export function AdminDashboard({ profile }) {
                 'Fin Contrato': emp.contract_end_date || (emp.contract_type === 'indefinido' ? 'Indefinido' : 'N/A'),
                 'Horario Entrada': emp.scheduled_start_time ? emp.scheduled_start_time.slice(0, 5) : 'No definido',
                 'Horario Salida': emp.scheduled_end_time ? emp.scheduled_end_time.slice(0, 5) : 'No definido',
+                'Tipo Jornada': emp.schedule_type || 'continua',
+                'H. Entrada 2': emp.scheduled_start_time_2 ? emp.scheduled_start_time_2.slice(0, 5) : '-',
+                'H. Salida 2': emp.scheduled_end_time_2 ? emp.scheduled_end_time_2.slice(0, 5) : '-',
                 'Estado': emp.active ? 'Activo' : 'Inactivo',
                 'Rol': emp.role === 'admin' ? 'Administrador' : emp.role === 'super_admin' ? 'Superadministrador' : 'Empleado'
             }))
@@ -808,6 +811,9 @@ export function AdminDashboard({ profile }) {
                 { wch: 15 }, // Fin
                 { wch: 12 }, // Horario In
                 { wch: 12 }, // Horario Out
+                { wch: 15 }, // Tipo Jornada
+                { wch: 12 }, // Entrada 2
+                { wch: 12 }, // Salida 2
                 { wch: 10 }, // Estado
                 { wch: 12 }  // Rol
             ]
