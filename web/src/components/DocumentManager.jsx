@@ -211,7 +211,7 @@ export function DocumentManager({ employee, adminProfile }) {
                     borderRadius: '4px',
                     fontWeight: 'bold' 
                 }}>
-                    BUILD: v1.7 (ESTABLE)
+                    BUILD: v1.9 (FIX-PERSISTENCE)
                 </span>
             </div>
 

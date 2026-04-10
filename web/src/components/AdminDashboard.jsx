@@ -433,33 +433,45 @@ export function AdminDashboard({ profile }) {
                 }
             }
 
-            const { error } = await supabase
+            const laborPayload = {
+                dni: editFormData.dni?.toUpperCase(),
+                social_security_number: editFormData.social_security_number,
+                email: editFormData.email,
+                contract_type: editFormData.contract_type,
+                contracted_hours_daily: parseFloat(editFormData.contracted_hours_daily) || 0,
+                contracted_hours_weekly: parseFloat(editFormData.contracted_hours_weekly) || 0,
+                contract_start_date: editFormData.contract_start_date,
+                contract_end_date: editFormData.contract_type === 'indefinido' ? null : editFormData.contract_end_date,
+                scheduled_start_time: editFormData.scheduled_start_time || null,
+                scheduled_end_time: editFormData.scheduled_end_time || null,
+                schedule_type: editFormData.schedule_type || 'continua',
+                scheduled_start_time_2: editFormData.schedule_type === 'partida' ? (editFormData.scheduled_start_time_2 || null) : null,
+                scheduled_end_time_2: editFormData.schedule_type === 'partida' ? (editFormData.scheduled_end_time_2 || null) : null
+            }
+
+            console.log('[AdminDashboard] Sending Labor Update:', laborPayload)
+
+            const { data: updateResult, error } = await supabase
                 .from('profiles')
-                .update({
-                    dni: editFormData.dni?.toUpperCase(),
-                    social_security_number: editFormData.social_security_number,
-                    email: editFormData.email,
-                    contract_type: editFormData.contract_type,
-                    contracted_hours_daily: parseFloat(editFormData.contracted_hours_daily),
-                    contracted_hours_weekly: parseFloat(editFormData.contracted_hours_weekly),
-                    contract_start_date: editFormData.contract_start_date,
-                    contract_end_date: editFormData.contract_type === 'indefinido' ? null : editFormData.contract_end_date,
-                    scheduled_start_time: editFormData.scheduled_start_time || null,
-                    scheduled_end_time: editFormData.scheduled_end_time || null,
-                    schedule_type: editFormData.schedule_type || 'continua',
-                    scheduled_start_time_2: editFormData.schedule_type === 'partida' ? (editFormData.scheduled_start_time_2 || null) : null,
-                    scheduled_end_time_2: editFormData.schedule_type === 'partida' ? (editFormData.scheduled_end_time_2 || null) : null
-                })
+                .update(laborPayload)
                 .eq('id', editFormData.id)
+                .select()
+
+            console.log('[AdminDashboard] Update result:', { updateResult, error })
 
             if (error) throw error
+            
+            if (!updateResult || updateResult.length === 0) {
+                console.warn('[AdminDashboard] Update succeeded but no rows were affected. Check RLS policies.')
+                throw new Error('No se pudo actualizar el registro. Es posible que no tengas permisos suficientes.')
+            }
 
             alert('✅ Datos actualizados correctamente')
             setEditMode(false)
             await fetchEmployees()
 
-            // Update local state immediately with the new data
-            setSelectedEmployee({ ...editFormData })
+            // Update local state immediately with the data returned from DB
+            setSelectedEmployee(updateResult[0])
 
         } catch (err) {
             console.error('Error updating employee data:', err)
