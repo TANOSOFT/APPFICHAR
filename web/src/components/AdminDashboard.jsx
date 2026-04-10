@@ -152,7 +152,12 @@ export function AdminDashboard({ profile }) {
                     contracted_hours_daily,
                     contracted_hours_weekly,
                     contract_start_date,
-                    contract_end_date
+                    contract_end_date,
+                    schedule_type,
+                    scheduled_start_time,
+                    scheduled_end_time,
+                    scheduled_start_time_2,
+                    scheduled_end_time_2
                 `)
                 .eq('tenant_id', profile.tenant_id)
                 .neq('role', 'super_admin')
@@ -453,9 +458,8 @@ export function AdminDashboard({ profile }) {
             setEditMode(false)
             await fetchEmployees()
 
-            // Re-select the employee to refresh display
-            const updatedEmp = employees.find(emp => emp.id === editFormData.id)
-            setSelectedEmployee(updatedEmp)
+            // Update local state immediately with the new data
+            setSelectedEmployee({ ...editFormData })
 
         } catch (err) {
             console.error('Error updating employee data:', err)
@@ -763,8 +767,11 @@ export function AdminDashboard({ profile }) {
                     contracted_hours_weekly,
                     contract_start_date,
                     contract_end_date,
+                    schedule_type,
                     scheduled_start_time,
-                    scheduled_end_time
+                    scheduled_end_time,
+                    scheduled_start_time_2,
+                    scheduled_end_time_2
                 `)
                 .eq('tenant_id', profile.tenant_id)
 
