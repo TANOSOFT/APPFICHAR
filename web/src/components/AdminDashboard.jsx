@@ -58,16 +58,14 @@ const handleFileDownload = async (blob, fileName, mimeType) => {
             const savedFile = await Filesystem.writeFile({
                 path: fileName,
                 data: base64Data,
-                directory: Directory.Documents
+                directory: Directory.Cache
             });
 
-            alert('✅ Archivo guardado correctamente en la carpeta Documentos de tu móvil.\n\nNombre: ' + fileName);
-
             await Share.share({
-                title: 'Descargar Reporte',
-                text: `Aquí tienes tu reporte: ${fileName}`,
+                title: 'Reporte Generado',
+                text: `Se ha generado el reporte: ${fileName}`,
                 url: savedFile.uri,
-                dialogTitle: 'Abrir reporte con...'
+                dialogTitle: 'Abrir o compartir reporte...'
             });
         } catch (err) {
             console.error('Error sharing file on mobile:', err);
